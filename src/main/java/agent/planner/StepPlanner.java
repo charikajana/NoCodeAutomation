@@ -17,7 +17,6 @@ public class StepPlanner {
 
         addPattern("wait", "^(?:wait\\s+for\\s+)?(?:page\\s+to\\s+load|network\\s+idle|seconds?)", -1, -1);
 
-        // Specific verify with value in quotes (e.g. Validate "Text" is displayed)
         addPattern("verify", "^(?:validate|verify|assert|check)\\s+[\"']([^\"']+)[\"'](?:\\s+message)?\\s+is\\s+(?:displayed|visible|present)", -1, 1);
 
         addPattern("verify_enabled", "^(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+)?enabled", 1, -1);
@@ -30,7 +29,8 @@ public class StepPlanner {
         addPattern("verify", "^(?:validate|verify|assert|check|should be)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+|are\\s+)?(?:displayed|visible|present|equals|contains)(?:\\s+[\"']([^\"']+)[\"'])?", 1, 2);
 
         addPattern("fill", "^(?:enter|fill|type|input)\\s+[\"']([^\"']+)[\"']\\s+(?:into|in|to|for)\\s+(?:the\\s+)?[\"']?([^\"']+)[\"']?", 2, 1);
-        addPattern("fill", "^(?:enter|type|input|write)\\s+([\\w\\s\\-]+?)(?:[: ])?\\s+[\"']([^\"']+)[\"']", 1, 2);
+        addPattern("fill", "^(?:fill|enter|type|input)\\s+(?:the\\s+)?(.+?)\\s+with\\s+[\"']([^\"']+)[\"']", 1, 2);
+        addPattern("fill", "^(?:fill|enter|type|input|write)\\s+(?:the\\s+)?([\\w\\s\\-]+?)(?:[: ])?\\s+[\"']([^\"']+)[\"']", 1, 2);
 
         addPattern("check", "^(?:check|tick|mark)\\s+(?:the\\s+)?(?:checkbox\\s+|box\\s+)?[\"']?([^\"']+)[\"']?", 1, -1);
         addPattern("uncheck", "^(?:uncheck|untick|unmark)\\s+(?:the\\s+)?(?:checkbox\\s+|box\\s+)?[\"']?([^\"']+)[\"']?", 1, -1);

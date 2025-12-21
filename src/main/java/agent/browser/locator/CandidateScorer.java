@@ -39,7 +39,7 @@ public class CandidateScorer {
         if (isFill) {
             if ("input".equals(el.tag) && !"checkbox".equals(el.type) && !"radio".equals(el.type)) score += 20;
             if ("textarea".equals(el.tag)) score += 20;
-            if ("label".equals(el.tag)) score -= 10; 
+            if ("label".equals(el.tag)) score += 5; 
         }
         if (isCheck) {
             if ("input".equals(el.tag) && ("checkbox".equals(el.type) || "radio".equals(el.type))) score += 50; 

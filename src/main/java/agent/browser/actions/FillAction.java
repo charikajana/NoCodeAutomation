@@ -13,9 +13,14 @@ public class FillAction implements BrowserAction {
         
         Locator input = locator.waitForSmartElement(targetName, "input");
         if (input != null) {
-            input.fill(value != null ? value : "");
-            System.out.println("Filled '" + value + "' into " + targetName);
-            return true;
+            try {
+                input.fill(value != null ? value : "");
+                System.out.println("Filled '" + value + "' into " + targetName);
+                return true;
+            } catch (com.microsoft.playwright.PlaywrightException e) {
+                System.err.println("FAILURE: Element found for '" + targetName + "' but could not be filled (Errors: " + e.getMessage().split("\n")[0] + ")");
+                return false;
+            }
         } else {
             System.err.println("FAILURE: Element not found for filling: " + targetName);
             return false;

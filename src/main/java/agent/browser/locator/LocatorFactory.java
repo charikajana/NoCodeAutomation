@@ -59,6 +59,29 @@ public class LocatorFactory {
                  System.out.println("  > Refining wrapper match to nested input.");
                  return nested;
              }
+             
+             // 3. Look for sibling input (via parent)
+             // This handles: <div class="group"><label>Name</label><input></div>
+             Locator parent = finalLocator.locator("xpath=..");
+             Locator sibling = parent.locator("input, textarea").first();
+             if (sibling.count() > 0) {
+                 System.out.println("  > Refining match to sibling input.");
+                 return sibling;
+             }
+
+             // 4. Look for cousin input (via grandparent)
+             // This handles: <div class="row"><div class="col"><label>Name</label></div><div class="col"><input></div></div>
+             Locator grandParent = finalLocator.locator("xpath=../..");
+             Locator cousin = grandParent.locator("input, textarea").first();
+             if (cousin.count() > 0) {
+                 System.out.println("  > Refining match to cousin input.");
+                 return cousin;
+             }
+             
+             // If we reached here, we have a match (e.g. valid text in a div) but it's not an input/textarea
+             // and we couldn't find a related input. Returning it will cause FillAction to crash.
+             System.out.println("  > Match found (" + foundTag + ") but not a valid input/textarea. Discarding.");
+             return null;
          }
 
          return finalLocator;
