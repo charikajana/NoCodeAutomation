@@ -5,6 +5,8 @@ import agent.planner.ActionPlan;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 
+import agent.browser.locator.TableNavigator;
+
 public class VerifyTextAction implements BrowserAction {
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
@@ -18,7 +20,20 @@ public class VerifyTextAction implements BrowserAction {
         }
 
         System.out.println("Verifying text presence: " + textToVerify);
-        Locator loc = page.getByText(textToVerify).first();
+        
+        Locator loc = null;
+        if (plan.getRowAnchor() != null) {
+             TableNavigator navigator = new TableNavigator();
+             Locator row = navigator.findRowByAnchor(page, plan.getRowAnchor());
+             if (row == null) {
+                 System.err.println("FAILURE: Row not found for anchor: " + plan.getRowAnchor());
+                 return false;
+             }
+             // Verify text IS inside the row
+             loc = row.getByText(textToVerify).first();
+        } else {
+             loc = page.getByText(textToVerify).first();
+        }
 
         try {
             com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat(loc).isVisible();

@@ -12,12 +12,13 @@ Feature: Checkbox Automation
     And fill the salary field with "5000"
     And fill the department field with "IT"
     And click on Submit button
-    Then Verify "John" is displayed
-    And Verify "Doe" is displayed
-    And Verify "john.doe@example.com" is displayed
-    And Verify "30" is displayed
-    And Verify "5000" is displayed
-    And Verify "IT" is displayed
+    Then Verify New Row is added with "John" in First Name column
+    And take the ScreenShot
+    And wait for 20 seconds
+    # Extract all column values from the row where First Name is "John"
+    And get all column values where "First Name" is "John"
+    And Close the browser
+
 
 
     

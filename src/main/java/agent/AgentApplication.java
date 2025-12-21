@@ -3,7 +3,7 @@ package agent;
 import agent.browser.BrowserService;
 import agent.feature.FeatureReader;
 import agent.planner.ActionPlan;
-import agent.planner.StepPlanner;
+import agent.planner.SmartStepParser;
 
 import java.util.List;
 
@@ -12,7 +12,7 @@ public class AgentApplication {
         System.out.println("Simple Test Agent started...");
 
         FeatureReader reader = new FeatureReader();
-        StepPlanner planner = new StepPlanner();
+        SmartStepParser planner = new SmartStepParser();
         BrowserService browserService = new BrowserService();
 
         List<String> steps = reader.readSteps("src/main/resources/features/WebTable.feature");
@@ -26,7 +26,7 @@ public class AgentApplication {
 
         try {
             for (String step : steps) {
-                ActionPlan plan = planner.plan(step);
+                ActionPlan plan = planner.parseStep(step);
                 System.out.println(plan);
                 boolean success = browserService.executeAction(plan);
                 if (success) {

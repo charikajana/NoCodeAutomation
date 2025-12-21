@@ -26,7 +26,20 @@ public class BrowserService {
         actionHandlers.put("verify_enabled", new VerifyEnabledAction());
         actionHandlers.put("verify_disabled", new VerifyDisabledAction());
         actionHandlers.put("screenshot", new ScreenshotAction());
+        
+        // Wait actions - all variations
         actionHandlers.put("wait", new WaitAction());
+        actionHandlers.put("wait_time", new WaitAction());
+        actionHandlers.put("wait_page", new WaitAction());
+        actionHandlers.put("wait_appear", new WaitAction());
+        actionHandlers.put("wait_disappear", new WaitAction());
+        
+        // Table actions
+        actionHandlers.put("row_added_with_value", new VerifyRowAddedAction());
+        actionHandlers.put("get_row_values", new GetRowValuesAction());
+        
+        // Browser lifecycle
+        actionHandlers.put("close_browser", new CloseBrowserAction());
     }
 
     public void startBrowser() {

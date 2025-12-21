@@ -20,9 +20,13 @@ public class SmartLocator {
     }
 
     public Locator waitForSmartElement(String name, String type) {
+        return waitForSmartElement(name, type, null);
+    }
+
+    public Locator waitForSmartElement(String name, String type, Locator scope) {
         long deadline = System.currentTimeMillis() + 180000;
         while (System.currentTimeMillis() < deadline) {
-            Locator loc = findSmartElement(name, type);
+            Locator loc = findSmartElement(name, type, scope);
             if (loc != null && loc.isVisible()) {
                 return loc;
             }
@@ -37,12 +41,16 @@ public class SmartLocator {
     }
 
     public Locator findSmartElement(String name, String parsedType) {
+        return findSmartElement(name, parsedType, null);
+    }
+
+    public Locator findSmartElement(String name, String parsedType, Locator scope) {
         if (name == null) return null;
 
-        System.out.println("Analyzing DOM for target: '" + name + "' (Type: " + parsedType + ")");
+        System.out.println("Analyzing DOM for target: '" + name + "' (Type: " + parsedType + ")" + (scope != null ? " [Scoped]" : ""));
 
-        // 1. Scan DOM
-        List<ElementCandidate> elements = docScanner.scan(page);
+        // 1. Scan DOM (Scoped or Global)
+        List<ElementCandidate> elements = (scope != null) ? docScanner.scan(scope) : docScanner.scan(page);
 
         double bestScore = 0.0;
         ElementCandidate bestElement = null;
@@ -58,7 +66,7 @@ public class SmartLocator {
 
         // 3. Resolve Locator
         if (bestScore > 30 && bestElement != null) {
-            return locatorFactory.createLocator(bestElement, bestScore, parsedType);
+            return locatorFactory.createLocator(bestElement, bestScore, parsedType, scope);
         }
         
         System.out.println("  > No strong match found for '" + name + "'");

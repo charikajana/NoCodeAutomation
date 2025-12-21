@@ -5,13 +5,25 @@ import agent.planner.ActionPlan;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 
+import agent.browser.locator.TableNavigator;
+
 public class FillAction implements BrowserAction {
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
         String targetName = plan.getElementName();
         String value = plan.getValue();
+        Locator scope = null;
+
+        if (plan.getRowAnchor() != null) {
+             TableNavigator navigator = new TableNavigator();
+             scope = navigator.findRowByAnchor(page, plan.getRowAnchor());
+             if (scope == null) {
+                 System.err.println("FAILURE: Row not found for anchor: " + plan.getRowAnchor());
+                 return false;
+             }
+        }
         
-        Locator input = locator.waitForSmartElement(targetName, "input");
+        Locator input = locator.waitForSmartElement(targetName, "input", scope);
         if (input != null) {
             try {
                 input.fill(value != null ? value : "");

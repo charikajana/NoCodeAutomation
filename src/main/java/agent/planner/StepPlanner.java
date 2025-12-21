@@ -11,31 +11,53 @@ public class StepPlanner {
 
     public StepPlanner() {
 
-        addPattern("navigate", "^(?:open|go to|navigate to|launch)\\s+(?:the\\s+)?(?:url|website|site|page)?\\s*[\"']?([^\"']+)[\"']?", 1, -1);
+        addPattern("navigate", "^(?:open|go to|navigate to|launch)\\s+(?:the\\s+)?(?:url|website|site|page)?\\s*[\"']?([^\"']+)[\"']?", 1, -1, -1);
 
-        addPattern("screenshot", "^(?:take|capture)\\s+(?:a\\s+)?(?:screen\\s?shot|snap\\s?shot)", -1, -1);
+        addPattern("screenshot", "^(?:take|capture)\\s+(?:a\\s+)?(?:screen\\s?shot|snap\\s?shot)", -1, -1, -1);
 
-        addPattern("wait", "^(?:wait\\s+for\\s+)?(?:page\\s+to\\s+load|network\\s+idle|seconds?)", -1, -1);
-
-        addPattern("verify", "^(?:validate|verify|assert|check)\\s+[\"']([^\"']+)[\"'](?:\\s+message)?\\s+is\\s+(?:displayed|visible|present)", -1, 1);
-
-        addPattern("verify_enabled", "^(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+)?enabled", 1, -1);
-        addPattern("verify_disabled", "^(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+)?disabled", 1, -1);
+        // WAIT PATTERNS - Multiple variations handled
+        // 1. Time-based waits: "wait for 20 seconds", "wait 20 sec", "wait 5s"
+        addPattern("wait_time", "^(?:wait|pause)(?:\\s+for)?\\s+(\\d+)\\s*(?:second|sec|s)(?:s)?", 1, -1, -1);
         
-        addPattern("verify_not", "^(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+[\"']([^\"']+)[\"']\\s+(?:is\\s+)?not\\s+(?:displayed|visible|present)", 1, 2);
-        addPattern("verify", "^(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+[\"']([^\"']+)[\"']\\s+(?:is\\s+)?(?:displayed|visible|present)", 1, 2);
+        // 2. Wait for element to disappear/hide: "wait for 'Loading' to disappear", "wait until 'spinner' is gone"
+        addPattern("wait_disappear", "^(?:wait|pause)(?:\\s+for|\\s+until)?\\s+[\"']?([^\"']+)[\"']?\\s+(?:to\\s+)?(?:disappear|hide|be\\s+hidden|is\\s+gone|vanish|not\\s+visible)", 1, -1, -1);
+        
+        // 3. Wait for element to appear/be visible: "wait for 'Submit' to appear", "wait until 'Success' is visible"
+        addPattern("wait_appear", "^(?:wait|pause)(?:\\s+for|\\s+until)?\\s+[\"']?([^\"']+)[\"']?\\s+(?:to\\s+)?(?:appear|show|be\\s+visible|is\\s+visible|display|be\\s+displayed)", 1, -1, -1);
+        
+        // 4. Page load waits (multiple variations): "wait for page load", "wait for page to be loaded", "wait for page load completed"
+        addPattern("wait_page", "^(?:wait|pause)(?:\\s+for)?\\s+(?:page|network)(?:\\s+to)?(?:\\s+be)?(?:\\s+)?(?:load(?:ed)?(?:\\s+completed)?|idle|ready)", -1, -1, -1);
 
-        addPattern("verify_not", "^(?:validate|verify|assert|check|should be)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+|are\\s+)?not\\s+(?:displayed|visible|present)(?:\\s+[\"']([^\"']+)[\"'])?", 1, 2);
-        addPattern("verify", "^(?:validate|verify|assert|check|should be)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+|are\\s+)?(?:displayed|visible|present|equals|contains)(?:\\s+[\"']([^\"']+)[\"'])?", 1, 2);
+        // TABLE ACTIONS
+        // Click "Edit" in the row identifying "John"
+        addPattern("click", "^(?:click|tap)\\s+[\"']([^\"']+)[\"']\\s+(?:in|for|at|on)\\s+(?:the\\s+)?(?:row|record)\\s+(?:identifying|for|with|containing)\\s+[\"']([^\"']+)[\"']", 1, -1, 2);
+        
+        // Enter "5000" in "Salary" for the row with "John" -- Element="Salary", Value="5000", Anchor="John"
+        addPattern("fill", "^(?:enter|fill|type)\\s+[\"']([^\"']+)[\"']\\s+(?:in|into|for)\\s+[\"']([^\"']+)[\"']\\s+(?:in|for|at)\\s+(?:the\\s+)?(?:row|record)\\s+(?:identifying|for|with|containing)\\s+[\"']([^\"']+)[\"']", 2, 1, 3);
+        
+        // Verify "5000" is displayed in the row for "John" -- Element=null (check text presence in row), Value="5000", Anchor="John"
+        addPattern("verify", "^(?:verify|assert)\\s+[\"']([^\"']+)[\"']\\s+is\\s+displayed\\s+(?:in|for|at)\\s+(?:the\\s+)?(?:row|record)\\s+(?:identifying|for|with|containing)\\s+[\"']([^\"']+)[\"']", -1, 1, 2);
 
-        addPattern("fill", "^(?:enter|fill|type|input)\\s+[\"']([^\"']+)[\"']\\s+(?:into|in|to|for)\\s+(?:the\\s+)?[\"']?([^\"']+)[\"']?", 2, 1);
-        addPattern("fill", "^(?:fill|enter|type|input)\\s+(?:the\\s+)?(.+?)\\s+with\\s+[\"']([^\"']+)[\"']", 1, 2);
-        addPattern("fill", "^(?:fill|enter|type|input|write)\\s+(?:the\\s+)?([\\w\\s\\-]+?)(?:[: ])?\\s+[\"']([^\"']+)[\"']", 1, 2);
 
-        addPattern("check", "^(?:check|tick|mark)\\s+(?:the\\s+)?(?:checkbox\\s+|box\\s+)?[\"']?([^\"']+)[\"']?", 1, -1);
-        addPattern("uncheck", "^(?:uncheck|untick|unmark)\\s+(?:the\\s+)?(?:checkbox\\s+|box\\s+)?[\"']?([^\"']+)[\"']?", 1, -1);
+        addPattern("verify", "^(?:validate|verify|assert|check)\\s+[\"']([^\"']+)[\"'](?:\\s+message)?\\s+is\\s+(?:displayed|visible|present)", -1, 1, -1);
 
-        addPattern("click", "^(?:click|tap|press|hit)\\s+(?:on\\s+)?(?:the\\s+)?[\"']?([^\"']+)[\"']?", 1, -1);
+        addPattern("verify_enabled", "^(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+)?enabled", 1, -1, -1);
+        addPattern("verify_disabled", "^(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+)?disabled", 1, -1, -1);
+        
+        addPattern("verify_not", "^(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+[\"']([^\"']+)[\"']\\s+(?:is\\s+)?not\\s+(?:displayed|visible|present)", 1, 2, -1);
+        addPattern("verify", "^(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+[\"']([^\"']+)[\"']\\s+(?:is\\s+)?(?:displayed|visible|present)", 1, 2, -1);
+
+        addPattern("verify_not", "^(?:validate|verify|assert|check|should be)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+|are\\s+)?not\\s+(?:displayed|visible|present)(?:\\s+[\"']([^\"']+)[\"'])?", 1, 2, -1);
+        addPattern("verify", "^(?:validate|verify|assert|check|should be)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+|are\\s+)?(?:displayed|visible|present|equals|contains)(?:\\s+[\"']([^\"']+)[\"'])?", 1, 2, -1);
+
+        addPattern("fill", "^(?:enter|fill|type|input)\\s+[\"']([^\"']+)[\"']\\s+(?:into|in|to|for)\\s+(?:the\\s+)?[\"']?([^\"']+)[\"']?", 2, 1, -1);
+        addPattern("fill", "^(?:fill|enter|type|input)\\s+(?:the\\s+)?(.+?)\\s+with\\s+[\"']([^\"']+)[\"']", 1, 2, -1);
+        addPattern("fill", "^(?:fill|enter|type|input|write)\\s+(?:the\\s+)?([\\w\\s\\-]+?)(?:[: ])?\\s+[\"']([^\"']+)[\"']", 1, 2, -1);
+
+        addPattern("check", "^(?:check|tick|mark)\\s+(?:the\\s+)?(?:checkbox\\s+|box\\s+)?[\"']?([^\"']+)[\"']?", 1, -1, -1);
+        addPattern("uncheck", "^(?:uncheck|untick|unmark)\\s+(?:the\\s+)?(?:checkbox\\s+|box\\s+)?[\"']?([^\"']+)[\"']?", 1, -1, -1);
+
+        addPattern("click", "^(?:click|tap|press|hit)\\s+(?:on\\s+)?(?:the\\s+)?[\"']?([^\"']+)[\"']?", 1, -1, -1);
     }
 
     public ActionPlan plan(String step) {
@@ -56,6 +78,10 @@ public class StepPlanner {
                 
                 if (p.valueGroup != -1 && m.groupCount() >= p.valueGroup) {
                     plan.setValue(stripQuotes(m.group(p.valueGroup)));
+                }
+
+                if (p.rowAnchorGroup != -1 && m.groupCount() >= p.rowAnchorGroup) {
+                    plan.setRowAnchor(stripQuotes(m.group(p.rowAnchorGroup)));
                 }
 
                 plan.setLocatorStrategy("regex-smart");
@@ -95,8 +121,8 @@ public class StepPlanner {
         return plan;
     }
 
-    private void addPattern(String action, String regex, int elementGroup, int valueGroup) {
-        patterns.add(new StepPattern(Pattern.compile(regex, Pattern.CASE_INSENSITIVE), action, elementGroup, valueGroup));
+    private void addPattern(String action, String regex, int elementGroup, int valueGroup, int rowAnchorGroup) {
+        patterns.add(new StepPattern(Pattern.compile(regex, Pattern.CASE_INSENSITIVE), action, elementGroup, valueGroup, rowAnchorGroup));
     }
 
     private String extractKeyword(String step) {
@@ -133,12 +159,14 @@ public class StepPlanner {
         String actionType;
         int elementGroup;
         int valueGroup;
+        int rowAnchorGroup;
 
-        StepPattern(Pattern regex, String actionType, int elementGroup, int valueGroup) {
+        StepPattern(Pattern regex, String actionType, int elementGroup, int valueGroup, int rowAnchorGroup) {
             this.regex = regex;
             this.actionType = actionType;
             this.elementGroup = elementGroup;
             this.valueGroup = valueGroup;
+            this.rowAnchorGroup = rowAnchorGroup;
         }
     }
 }

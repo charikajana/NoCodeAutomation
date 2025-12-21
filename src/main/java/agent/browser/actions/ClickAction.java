@@ -5,11 +5,24 @@ import agent.planner.ActionPlan;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 
+import agent.browser.locator.TableNavigator;
+
 public class ClickAction implements BrowserAction {
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
         String targetName = plan.getElementName();
-        Locator clickable = locator.waitForSmartElement(targetName, "button");
+        Locator scope = null;
+
+        if (plan.getRowAnchor() != null) {
+             TableNavigator navigator = new TableNavigator();
+             scope = navigator.findRowByAnchor(page, plan.getRowAnchor());
+             if (scope == null) {
+                 System.err.println("FAILURE: Row not found for anchor: " + plan.getRowAnchor());
+                 return false;
+             }
+        }
+        
+        Locator clickable = locator.waitForSmartElement(targetName, "button", scope);
         
         if (clickable != null) {
             try {
