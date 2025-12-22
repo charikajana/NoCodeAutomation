@@ -37,6 +37,9 @@ public class BrowserService {
         // Table actions
         actionHandlers.put("row_added_with_value", new VerifyRowAddedAction());
         actionHandlers.put("get_row_values", new GetRowValuesAction());
+        actionHandlers.put("click_in_row", new ClickAction());
+        actionHandlers.put("click_specific_in_row", new ClickAction());
+        actionHandlers.put("verify_row_not_exists", new VerifyRowNotExistsAction());
         
         // Browser lifecycle
         actionHandlers.put("close_browser", new CloseBrowserAction());

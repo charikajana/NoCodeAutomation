@@ -62,6 +62,11 @@ public class SmartStepParser {
         addTablePattern("click_in_row",
             "^when\\s+(?:user\\s+)?clicks?\\s+[\"']([^\"']+)[\"']\\s+in\\s+(?:the\\s+)?row\\s+where\\s+[\"']([^\"']+)[\"']\\s+is\\s+[\"']([^\"']+)[\"']",
             Map.of("buttonName", 1, "conditionColumn", 2, "conditionValue", 3));
+        
+        // Pattern for: "click one/on/the Edit Icon in the row where 'First Name' is 'John'"
+        addTablePattern("click_specific_in_row",
+            "^(?:when|and)?\\s*clicks?\\s+(?:on|one|the|a|an)?\\s*(.+?)\\s+in\\s+(?:the\\s+)?row\\s+where\\s+[\"']?([^\"']+)[\"']?\\s+is\\s+[\"']([^\"']+)[\"']",
+            Map.of("buttonName", 1, "conditionColumn", 2, "conditionValue", 3));
             
         addTablePattern("select_checkbox_in_row",
             "^when\\s+(?:user\\s+)?selects?\\s+(?:the\\s+)?checkbox\\s+in\\s+(?:the\\s+)?row\\s+where\\s+[\"']([^\"']+)[\"']\\s+is\\s+[\"']([^\"']+)[\"']",
@@ -70,6 +75,11 @@ public class SmartStepParser {
         // DATA EXTRACTION: Get all column values from a row
         addTablePattern("get_row_values",
             "^(?:when|then|and)?\\s*(?:get|extract|retrieve|fetch)\\s+all\\s+(?:column\\s+)?values?\\s+(?:from\\s+(?:the\\s+)?row\\s+)?where\\s+[\"']?([^\"']+)[\"']?\\s+is\\s+[\"']([^\"']+)[\"']",
+            Map.of("conditionColumn", 1, "conditionValue", 2));
+        
+        // ROW VALIDATION: Verify row does NOT exist
+        addTablePattern("verify_row_not_exists",
+            "^(?:then|and)?\\s*(?:validate|verify|check|ensure)\\s+(?:that\\s+)?(?:the\\s+)?row\\s+should\\s+not\\s+(?:be\\s+)?(?:present|exist)\\s+where\\s+[\"']?([^\"']+)[\"']?\\s+is\\s+[\"']([^\"']+)[\"']",
             Map.of("conditionColumn", 1, "conditionValue", 2));
 
         // CATEGORY: BROWSER LIFECYCLE
@@ -186,6 +196,14 @@ public class SmartStepParser {
                 // Static value
                 setField(plan, field, (String) value);
             }
+        }
+        
+        // Special handling for click_in_row and click_specific_in_row actions
+        // Set rowAnchor to enable row-scoped element finding
+        if (("click_in_row".equals(actionType) || "click_specific_in_row".equals(actionType)) 
+            && plan.getRowConditionValue() != null) {
+            plan.setRowAnchor(plan.getRowConditionValue());
+            System.out.println("  > Setting rowAnchor: " + plan.getRowConditionValue());
         }
         
         return plan;

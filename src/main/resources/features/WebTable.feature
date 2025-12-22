@@ -17,7 +17,7 @@ Feature: Checkbox Automation
     And wait for 20 seconds
     # Extract all column values from the row where First Name is "John"
     And get all column values where "First Name" is "John"
-    And click one Edit Icon in the row where "First Name" is "John"
+    And click on Edit Icon in the row where "First Name" is "John"
     And fill the first name field with "Chari"
     And fill the last name field with "Palapadu"
     And fill the email field with "johnChari.doe@example.com"
@@ -28,6 +28,9 @@ Feature: Checkbox Automation
     Then Verify New Row is added with "Chari" in First Name column
     And take the ScreenShot
     And wait for 20 seconds
+    And click on Delete Icon in the row where "First Name" is "Chari"
+    Then Validate row should not be present where "First Name" is "Chari"
+
 
 
 
