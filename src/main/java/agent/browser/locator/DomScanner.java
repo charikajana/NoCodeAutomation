@@ -1,5 +1,6 @@
 package agent.browser.locator;
 
+import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,8 +9,18 @@ import java.util.Map;
 public class DomScanner {
 
     public List<ElementCandidate> scan(Page page) {
-        Object result = page.evaluate("() => {" +
-                "  const candidates = Array.from(document.querySelectorAll('button, a, input, textarea, select, [role=\"button\"], label, span, div, p, h1, h2, h3, h4, h5, h6'));" +
+        return scanInternal(page, null);
+    }
+    
+    public List<ElementCandidate> scan(Locator scope) {
+        return scanInternal(null, scope);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<ElementCandidate> scanInternal(Page page, Locator scope) {
+        String js = "root => {" +
+                "  const base = root || document;" +
+                "  const candidates = Array.from(base.querySelectorAll('button, a, input, textarea, select, [role=\"button\"], label, span, div, p, h1, h2, h3, h4, h5, h6'));" +
                 "  return candidates.map(el => {" +
                 "    const rect = el.getBoundingClientRect();" +
                 "    const visible = rect.width > 0 && rect.height > 0 && window.getComputedStyle(el).visibility !== 'hidden';" +
@@ -28,7 +39,14 @@ public class DomScanner {
                 "      class: el.className || ''" +
                 "    };" +
                 "  }).filter(item => item !== null);" +
-                "}");
+                "}";
+
+        Object result;
+        if (scope != null) {
+            result = scope.evaluate(js);
+        } else {
+            result = page.evaluate("() => (" + js + ")()");
+        }
 
         List<Map<String, String>> rawList = (List<Map<String, String>>) result;
         List<ElementCandidate> candidates = new ArrayList<>();

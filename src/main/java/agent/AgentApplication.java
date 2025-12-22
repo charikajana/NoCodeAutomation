@@ -3,7 +3,7 @@ package agent;
 import agent.browser.BrowserService;
 import agent.feature.FeatureReader;
 import agent.planner.ActionPlan;
-import agent.planner.StepPlanner;
+import agent.planner.SmartStepParser;
 
 import java.util.List;
 
@@ -12,10 +12,10 @@ public class AgentApplication {
         System.out.println("Simple Test Agent started...");
 
         FeatureReader reader = new FeatureReader();
-        StepPlanner planner = new StepPlanner();
+        SmartStepParser planner = new SmartStepParser();
         BrowserService browserService = new BrowserService();
 
-        List<String> steps = reader.readSteps("src/main/resources/features/WebTable.feature");
+        List<String> steps = reader.readSteps("src/main/resources/features/Select.feature");
 
         browserService.startBrowser();
 
@@ -24,22 +24,34 @@ public class AgentApplication {
         int failed = 0;
         int skipped = 0;
 
+        boolean shouldContinue = true;
+        
         try {
             for (String step : steps) {
-                ActionPlan plan = planner.plan(step);
+                if (!shouldContinue) {
+                    skipped++;
+                    System.out.println("⏭️  SKIPPED: " + step);
+                    continue;
+                }
+                
+                ActionPlan plan = planner.parseStep(step);
                 System.out.println(plan);
                 boolean success = browserService.executeAction(plan);
+                
                 if (success) {
                     passed++;
                 } else {
                     failed++;
+                    // Stop execution on first failure to prevent cascading errors
+                    shouldContinue = false;
+                    System.err.println("\n❌ EXECUTION STOPPED: Step failed, skipping remaining steps to prevent uncontrolled loop\n");
                 }
             }
         } catch (Throwable e) {
             System.err.println("Critical Error (Agent Crash): " + e.getMessage());
             e.printStackTrace();
+            shouldContinue = false;
         } finally {
-            skipped = totalSteps - passed - failed;
             browserService.closeBrowser();
 
             System.out.println("\n==========================================");
