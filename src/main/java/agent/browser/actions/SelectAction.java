@@ -47,6 +47,32 @@ public class SelectAction implements BrowserAction {
             String[] values = optionText.split(";");
             System.out.println("  📋 Multi-value selection detected: " + values.length + " options");
             
+            // SMART BEHAVIOR: Check if current selections match desired selections
+            if (!"select".equals(tagName)) {
+                // For custom multiselect (React-Select), check current selected chips
+                java.util.List<String> currentSelections = getCurrentlySelectedOptions(dropdownWrapper);
+                java.util.Set<String> desiredSet = new java.util.HashSet<>(java.util.Arrays.asList(values));
+                desiredSet = desiredSet.stream().map(String::trim).collect(java.util.stream.Collectors.toSet());
+                
+                boolean exactMatch = currentSelections.size() == desiredSet.size() && 
+                                    currentSelections.stream().allMatch(desiredSet::contains);
+                
+                if (exactMatch) {
+                    System.out.println("  ✓ Current selections already match desired selections. Skipping...");
+                    return true;
+                }
+                
+                // Clear existing selections if they don't match
+                if (!currentSelections.isEmpty()) {
+                    System.out.println("  🗑️ Clearing " + currentSelections.size() + " existing selection(s) before selecting new ones...");
+                    for (String existing : currentSelections) {
+                        clearSingleSelection(dropdownWrapper, existing);
+                    }
+                    // Wait for dropdown to stabilize after clearing
+                    try { Thread.sleep(500); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                }
+            }
+            
             for (int i = 0; i < values.length; i++) {
                 String value = values[i].trim();
                 System.out.println("  🎯 Selecting option " + (i + 1) + " of " + values.length + ": '" + value + "'");
@@ -277,6 +303,14 @@ public class SelectAction implements BrowserAction {
         try {
             System.out.println("  ✅ Custom dropdown detected");
             
+            // For multiselect, check if this option is already selected
+            // Selected options appear as chips/tags with class containing 'multiValue'
+            Locator selectedChip = wrapper.locator(String.format("div[class*='multiValue']:has-text(\"%s\")", optionText)).first();
+            if (selectedChip.count() > 0 && selectedChip.isVisible()) {
+                System.out.println("  ✓ Option '" + optionText + "' is already selected in multiselect, skipping...");
+                return true;
+            }
+            
             // Get the wrapper's ID or class to scope our searches
             String wrapperId = (String) wrapper.evaluate("el => el.id || ''");
             String wrapperClass = (String) wrapper.evaluate("el => el.className || ''");
@@ -408,6 +442,51 @@ public class SelectAction implements BrowserAction {
             System.err.println("❌ FAILED: Custom dropdown interaction failed. Error: " + e.getMessage());
             e.printStackTrace();
             return false;
+        }
+    }
+    
+    /**
+     * Get list of currently selected options in a multiselect dropdown
+     */
+    private java.util.List<String> getCurrentlySelectedOptions(Locator wrapper) {
+        java.util.List<String> selected = new java.util.ArrayList<>();
+        try {
+            // For React-Select, selected options appear as chips/tags with class containing 'multiValue'
+            com.microsoft.playwright.Locator chips = wrapper.locator("div[class*='multiValue']");
+            int chipCount = chips.count();
+            
+            for (int i = 0; i < chipCount; i++) {
+                // Get the text of each chip (exclude the remove button)
+                Locator chip = chips.nth(i);
+                Locator label = chip.locator("div[class*='multiValueLabel']").first();
+                if (label.count() > 0) {
+                    String text = label.textContent().trim();
+                    selected.add(text);
+                }
+            }
+        } catch (Exception e) {
+            // If error, return empty list
+        }
+        return selected;
+    }
+    
+    /**
+     * Clear a single selected option from multiselect dropdown
+     */
+    private void clearSingleSelection(Locator wrapper, String optionText) {
+        try {
+            // Find the chip for this option
+            Locator chip = wrapper.locator(String.format("div[class*='multiValue']:has-text(\"%s\")", optionText)).first();
+            if (chip.count() > 0 && chip.isVisible()) {
+                // Find and click the remove button
+                Locator removeButton = chip.locator("svg, div[role='button'], *[aria-label*='remove'], *[class*='Remove'], *[class*='remove']").first();
+                if (removeButton.count() > 0) {
+                    removeButton.click(new Locator.ClickOptions().setTimeout(3000));
+                    Thread.sleep(200);
+                }
+            }
+        } catch (Exception e) {
+            // Silently fail if can't clear
         }
     }
 }
