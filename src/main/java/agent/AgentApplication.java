@@ -24,22 +24,34 @@ public class AgentApplication {
         int failed = 0;
         int skipped = 0;
 
+        boolean shouldContinue = true;
+        
         try {
             for (String step : steps) {
+                if (!shouldContinue) {
+                    skipped++;
+                    System.out.println("⏭️  SKIPPED: " + step);
+                    continue;
+                }
+                
                 ActionPlan plan = planner.parseStep(step);
                 System.out.println(plan);
                 boolean success = browserService.executeAction(plan);
+                
                 if (success) {
                     passed++;
                 } else {
                     failed++;
+                    // Stop execution on first failure to prevent cascading errors
+                    shouldContinue = false;
+                    System.err.println("\n❌ EXECUTION STOPPED: Step failed, skipping remaining steps to prevent uncontrolled loop\n");
                 }
             }
         } catch (Throwable e) {
             System.err.println("Critical Error (Agent Crash): " + e.getMessage());
             e.printStackTrace();
+            shouldContinue = false;
         } finally {
-            skipped = totalSteps - passed - failed;
             browserService.closeBrowser();
 
             System.out.println("\n==========================================");

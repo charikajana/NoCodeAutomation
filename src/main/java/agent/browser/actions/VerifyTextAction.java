@@ -49,14 +49,14 @@ public class VerifyTextAction implements BrowserAction {
             }
 
             System.out.println("--------------------------------------------------");
-            System.out.println(" VALIDATION SUCCESS");
+            System.out.println(" ✅ VALIDATION SUCCESS");
             System.out.println(" Expected : " + textToVerify);
             System.out.println(" Actual UI: \n" + actualText);
             System.out.println("--------------------------------------------------");
             return true;
         } catch (Error e) {
              System.err.println("--------------------------------------------------");
-             System.err.println(" VALIDATION FAILED");
+             System.err.println(" ❌ VALIDATION FAILED");
              System.err.println(" Expected : " + textToVerify);
              System.err.println(" Actual UI: Element NOT found or NOT visible");
              System.err.println("--------------------------------------------------");

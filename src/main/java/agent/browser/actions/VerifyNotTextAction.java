@@ -25,9 +25,9 @@ public class VerifyNotTextAction implements BrowserAction {
             com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat(locNot).isHidden();
 
             System.out.println("--------------------------------------------------");
-            System.out.println(" VALIDATION SUCCESS (NEGATIVE)");
+            System.out.println(" ✅ VALIDATION SUCCESS (NEGATIVE)");
             System.out.println(" Expected NOT Visible: " + textToNotSee);
-            System.out.println(" Actual UI: Element is hidden/absent");
+            System.out.println(" Actual UI: Element is hidden/absent ✓");
             System.out.println("--------------------------------------------------");
             return true;
         } catch (Error e) {
@@ -36,9 +36,11 @@ public class VerifyNotTextAction implements BrowserAction {
             try { actualText = locNot.innerText().trim(); } catch (Exception ignored) {}
 
             System.err.println("--------------------------------------------------");
-            System.err.println(" VALIDATION FAILED (NEGATIVE)");
-            System.err.println(" Expected NOT Visible: " + textToNotSee);
-            System.err.println(" Actual UI: Element IS VISIBLE -> " + actualText);
+            System.err.println(" ❌ VALIDATION FAILED (NEGATIVE)");
+            System.err.println(" ERROR: Element is VISIBLE when it should NOT be!");
+            System.err.println(" Expected: Element '" + textToNotSee + "' should NOT be present");
+            System.err.println(" Actual: Element IS VISIBLE -> \"" + actualText + "\"");
+            System.err.println(" Action Required: Check your test logic or page state");
             System.err.println("--------------------------------------------------");
             return false;
         }
