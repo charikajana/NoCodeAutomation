@@ -55,7 +55,10 @@ public class SelectAction implements BrowserAction {
                 if ("select".equals(tagName)) {
                     success = handleNativeSelect(dropdownWrapper, value, dropdownLabel);
                 } else {
-                    success = handleCustomDropdown(page, dropdownWrapper, value, dropdownLabel);
+                    // For multiselect, only open dropdown on first selection
+                    // Subsequent selections should reuse the already-open menu
+                    boolean isFirstSelection = (i == 0);
+                    success = handleCustomDropdownMultiselect(page, dropdownWrapper, value, dropdownLabel, isFirstSelection);
                 }
                 
                 if (!success) {
@@ -115,6 +118,146 @@ public class SelectAction implements BrowserAction {
     }
 
     /**
+     * Handler for multiselect custom dropdowns (React-Select, MUI, Ant Design, etc.)
+     * For multiselect dropdowns, the menu stays open after selecting an option.
+     * Only click the control to open menu on first selection.
+     */
+    private boolean handleCustomDropdownMultiselect(Page page, Locator wrapper, String optionText, String label, boolean isFirstSelection) {
+        try {
+            System.out.println("  ✅ Custom dropdown detected");
+            
+            // Get the wrapper's ID or class to scope our searches
+            String wrapperId = (String) wrapper.evaluate("el => el.id || ''");
+            String wrapperClass = (String) wrapper.evaluate("el => el.className || ''");
+            
+            System.out.println("  📋 Wrapper ID: '" + wrapperId + "', Class: '" + wrapperClass + "'");
+            
+            // Step 1: Open dropdown (only if not already open)
+            if (isFirstSelection) {
+                try {
+                    // Try clicking the control div specifically for React-Select
+                    Locator control = wrapper.locator("[class*='control'], [class*='css-'][class*='-control']").first();
+                    if (control.count() > 0) {
+                        System.out.println("  🎯 Clicking React-Select control...");
+                        control.click(new Locator.ClickOptions().setTimeout(5000));
+                    } else {
+                        System.out.println("  🎯 Clicking dropdown wrapper...");
+                        wrapper.click(new Locator.ClickOptions().setTimeout(5000).setForce(true));
+                    }
+                    
+                    System.out.println("  ⏳ Clicked dropdown, waiting for options menu...");
+                    Thread.sleep(500); // Wait for animation
+                    
+                    // Wait for menu container to appear
+                    Locator menu = wrapper.locator("[class*='menu']").first();
+                    if (menu.count() > 0) {
+                        menu.waitFor(new Locator.WaitForOptions().setTimeout(5000));
+                        System.out.println("  ✅ Dropdown menu container appeared");
+                    } else {
+                        // Fallback: wait for any option elements to appear
+                        System.out.println("  ⏳ No menu container found, waiting for options...");
+                        page.locator("[id*='react-select'][id*='option'], div[class*='option'], [role='option']")
+                            .first()
+                            .waitFor(new Locator.WaitForOptions().setTimeout(5000).setState(com.microsoft.playwright.options.WaitForSelectorState.VISIBLE));
+                        System.out.println("  ✅ Options appeared");
+                    }
+                    
+                } catch (Exception e) {
+                    System.err.println("❌ Failed to open dropdown or menu didn't appear: " + e.getMessage());
+                    System.err.println("   Attempting to continue anyway...");
+                    // Don't fail immediately, try to find options anyway
+                }
+            } else {
+                System.out.println("  ✓ Multiselect menu already open, skipping click...");
+                Thread.sleep(300); // Small delay for stability
+            }
+            
+            // Step 2: Find and click the option (same logic for all selections)
+            return selectOptionFromOpenMenu(page, optionText, label);
+            
+        } catch (Exception e) {
+            System.err.println("❌ FAILED: Custom dropdown interaction failed. Error: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Select an option from an already-open menu.
+     * This method assumes the menu is visible and searches for the option.
+     */
+    private boolean selectOptionFromOpenMenu(Page page, String optionText, String label) {
+        // FIRST: Check if this option is already selected (appears as a chip/tag)
+        // This is important for multiselect dropdowns where already-selected options don't appear in the menu
+        Locator selectedChip = page.locator(String.format("div[class*='multiValue']:has-text(\"%s\")", optionText)).first();
+        if (selectedChip.count() > 0 && selectedChip.isVisible()) {
+            System.out.println("  ✓ Option '" + optionText + "' is already selected, skipping...");
+            return true; // Already selected, no need to select again
+        }
+        
+        Locator option = null;
+        
+        // Try multiple strategies in order of specificity
+        
+        // STRATEGY 1: React-Select with ID pattern (most reliable for React-Select)
+        String reactSelectIdPattern = String.format("div[id^='react-select-'][id*='-option-']:has-text(\"%s\")", optionText);
+        option = page.locator(reactSelectIdPattern).first();
+        if (option.count() > 0 && option.isVisible()) {
+            System.out.println("  🎯 Found option using React-Select ID pattern");
+            option.click();
+            System.out.println("✅ Selected '" + optionText + "' from dropdown '" + label + "'");
+            return true;
+        }
+        System.out.println("  ⏭️  React-Select ID pattern didn't match");
+        
+        // STRATEGY 2: React-Select with class pattern
+        String reactSelectClassPattern = String.format("div[class*='option']:has-text(\"%s\")", optionText);
+        option = page.locator(reactSelectClassPattern).first();
+        if (option.count() > 0 && option.isVisible()) {
+            System.out.println("  🎯 Found option using React-Select class pattern");
+            option.click();
+            System.out.println("✅ Selected '" + optionText + "' from dropdown '" + label + "'");
+            return true;
+        }
+        System.out.println("  ⏭️  React-Select class pattern didn't match");
+        
+        // STRATEGY 3: XPath-based React-Select pattern
+        option = page.locator(String.format("//div[starts-with(@id, 'react-select-') and contains(@id, '-option-') and contains(text(), '%s')]", optionText)).first();
+        if (option.count() > 0 && option.isVisible()) {
+            System.out.println("  🎯 Found option using React-Select XPath pattern");
+            option.click();
+            System.out.println("✅ Selected '" + optionText + "' from dropdown '" + label + "'");
+            return true;
+        }
+        System.out.println("  ⏭️  React-Select XPath pattern didn't match");
+        
+        // STRATEGY 4: Role-based search (ARIA-compliant dropdowns)
+        option = page.getByRole(com.microsoft.playwright.options.AriaRole.OPTION,
+                new Page.GetByRoleOptions().setName(optionText)).first();
+        if (option.count() > 0 && option.isVisible()) {
+            System.out.println("  🎯 Found option using ARIA role");
+            option.click();
+            System.out.println("✅ Selected '" + optionText + "' from dropdown '" + label + "'");
+            return true;
+        }
+        System.out.println("  ⏭️  ARIA role pattern didn't match");
+        
+        // STRATEGY 5: Generic visible text search (last resort)
+        option = page.getByText(optionText, new Page.GetByTextOptions().setExact(true)).first();
+        if (option.count() > 0 && option.isVisible()) {
+            System.out.println("  🎯 Found option using generic visible text search");
+            option.click();
+            System.out.println("✅ Selected '" + optionText + "' from dropdown '" + label + "'");
+            return true;
+        }
+        System.out.println("  ⏭️  Generic text search didn't match");
+        
+        System.err.println("❌ FAILED: Option '" + optionText + "' not found or not visible after opening dropdown");
+        System.err.println("   Tried all strategies: React-Select (ID, class, XPath), ARIA, and generic text");
+        return false;
+    }
+
+        /**
      * Universal handler for custom dropdowns (React-Select, MUI, Ant Design, etc.)
      * 
      * Strategy:

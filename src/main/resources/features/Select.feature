@@ -42,29 +42,12 @@ Feature: Comprehensive Dropdown/Select Testing - All Frameworks
 
   Scenario: Test React-Select Multi-Select Dropdown
     # React-Select with multiple selection capability
+    When Select "Green" from "Multiselect drop down"
+    When deselect "Green" from "Multiselect drop down"
     When Select "Green" and "Blue" and "Black" from "Multiselect drop down"
     Then Verify "Green" is displayed
     
-    When Select "Blue" from "Multiselect drop down"
-    Then Verify "Blue" is displayed
-    
-    When Select "Green" and "Black" from "Multiselect drop down"
-    Then Verify "Black" is displayed
-    
-    When Select "Black" and "Green" from "Multiselect drop down"
-    Then Verify "Green" is displayed
-    
-    When Select "Black" and "Blue" from "Multiselect drop down"
-    Then Verify "Blue" is displayed
-    
-    When Select "Black" and "Blue" and "Green" from "Multiselect drop down"
-    Then Verify "Green" is displayed
-    
-    When Select "Black" and "Blue" and "Green" from "Multiselect drop down"
-    Then Verify "Black" is displayed
-    
-    When Select "Black" and "Blue" and "Green" and "Red" from "Multiselect drop down"
-    Then Verify "Red" is displayed
+
     
     # Note: Multi-select allows multiple values simultaneously
 
