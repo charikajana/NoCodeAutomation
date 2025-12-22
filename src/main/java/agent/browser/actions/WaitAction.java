@@ -66,10 +66,22 @@ public class WaitAction implements BrowserAction {
      * Handle page load waits: "wait for page load", "wait for page to be loaded"
      */
     private boolean handlePageLoadWait(Page page) {
-        System.out.println("⏳ Waiting for page to load (network idle)...");
-        page.waitForLoadState(com.microsoft.playwright.options.LoadState.NETWORKIDLE);
-        System.out.println("✅ Page loaded successfully.");
-        return true;
+        try {
+            System.out.println("⏳ Waiting for page to load (DOM ready)...");
+            // Use DOMCONTENTLOADED instead of NETWORKIDLE (more reliable)
+            page.waitForLoadState(com.microsoft.playwright.options.LoadState.DOMCONTENTLOADED);
+            Thread.sleep(2000); // Additional wait for dynamic content
+            System.out.println("✅ Page loaded successfully.");
+            return true;
+        } catch (Exception e) {
+            try {
+                Thread.sleep(2000);
+                System.out.println("✅ Page load wait complete (fallback).");
+                return true;
+            } catch (InterruptedException ie) {
+                return false;
+            }
+        }
     }
     
     /**

@@ -86,6 +86,23 @@ public class SmartStepParser {
         addTablePattern("close_browser",
             "^(?:close|quit|exit)\\s+(?:the\\s+)?browser",
             Map.of());
+        
+        // CATEGORY: WINDOW/TAB MANAGEMENT
+        addTablePattern("switch_to_new_window",
+            "^(?:switch|navigate|go)\\s+to\\s+(?:the\\s+)?(?:new|second|latest)\\s+(?:window|tab)",
+            Map.of());
+        
+        addTablePattern("switch_to_main_window",
+            "^(?:switch|navigate|go)\\s+(?:back\\s+)?to\\s+(?:the\\s+)?(?:main|first|original|parent)\\s+(?:window|tab)",
+            Map.of());
+        
+        addTablePattern("close_current_window",
+            "^(?:close|shut)\\s+(?:the\\s+)?(?:current|this)\\s+(?:window|tab)",
+            Map.of());
+        
+        addTablePattern("close_window",
+            "^(?:close|shut)\\s+(?:the\\s+)?(?:second|new|latest)\\s+(?:window|tab)",
+            Map.of());
 
         
         // CATEGORY 5: SORTING

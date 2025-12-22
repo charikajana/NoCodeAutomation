@@ -39,12 +39,21 @@ public class StepPlanner {
         addPattern("verify", "^(?:verify|assert)\\s+[\"']([^\"']+)[\"']\\s+is\\s+displayed\\s+(?:in|for|at)\\s+(?:the\\s+)?(?:row|record)\\s+(?:identifying|for|with|containing)\\s+[\"']([^\"']+)[\"']", -1, 1, 2);
 
 
-        addPattern("verify", "^(?:validate|verify|assert|check)\\s+[\"']([^\"']+)[\"'](?:\\s+message)?\\s+is\\s+(?:displayed|visible|present)", -1, 1, -1);
+        // Additional flexible patterns for various phrasings - MUST BE FIRST for priority
+        // "verify 'text' this text present" or "validate 'text' text present"
+        addPattern("verify", "^(?:then\\s+)?(?:validate|verify|assert|check)\\s+[\"']([^\"']+)[\"']\\s+(?:this\\s+)?(?:text|message)\\s+(?:is\\s+)?(?:present|shown|displayed|visible)", -1, 1, -1);
+        addPattern("verify", "^(?:then\\s+)?(?:validate|verify|assert|check)\\s+[\"']([^\"']+)[\"']\\s+(?:message|text)?\\s*(?:should\\s+be)?\\s*(?:display|displayed|present|shown|visible)", -1, 1, -1);
+        
+        // NEGATIVE VERIFICATION: Flexible patterns for 'should not be display/displayed'
+        addPattern("verify_not", "^(?:then\\s+)?(?:validate|verify|assert|check)\\s+[\"']([^\"']+)[\"']\\s+(?:message|text)?\\s*(?:should\\s+not\\s+be|should\\s+not)\\s*(?:display|displayed|present|shown|visible)", -1, 1, -1);
+        addPattern("verify_not", "^(?:then\\s+)?(?:validate|verify|assert|check)\\s+[\"']([^\"']+)[\"']\\s+(?:this\\s+)?(?:text|message)\\s+(?:should\\s+)?not\\s+(?:be\\s+)?(?:display|displayed|present|shown|visible)", -1, 1, -1);
+
+        addPattern("verify", "^(?:validate|verify|assert|check)\\s+[\"']([^\"']+)[\"'](?:\\s+message)?\\s+is\\s+(?:displayed|visible|present|shown)", -1, 1, -1);
 
         addPattern("verify_enabled", "^(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+)?enabled", 1, -1, -1);
         addPattern("verify_disabled", "^(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+)?disabled", 1, -1, -1);
         
-        addPattern("verify_not", "^(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+[\"']([^\"']+)[\"']\\s+(?:is\\s+)?not\\s+(?:displayed|visible|present)", 1, 2, -1);
+        addPattern("verify_not", "^(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+[\"']([^\"']+)[\"']\\s+(?:is\\s+)?not\\s+(?:displayed|visible|present|shown)", 1, 2, -1);
         addPattern("verify", "^(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+[\"']([^\"']+)[\"']\\s+(?:is\\s+)?(?:displayed|visible|present)", 1, 2, -1);
 
         addPattern("verify_not", "^(?:validate|verify|assert|check|should be)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+|are\\s+)?not\\s+(?:displayed|visible|present)(?:\\s+[\"']([^\"']+)[\"'])?", 1, 2, -1);

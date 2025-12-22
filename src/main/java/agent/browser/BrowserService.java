@@ -45,6 +45,13 @@ public class BrowserService {
         
         // Browser lifecycle
         actionHandlers.put("close_browser", new CloseBrowserAction());
+        
+        // Window/Tab management
+        WindowManagementAction windowMgmt = new WindowManagementAction();
+        actionHandlers.put("switch_to_new_window", windowMgmt);
+        actionHandlers.put("switch_to_main_window", windowMgmt);
+        actionHandlers.put("close_current_window", windowMgmt);
+        actionHandlers.put("close_window", windowMgmt);
     }
 
     public void startBrowser() {
@@ -64,15 +71,31 @@ public class BrowserService {
 
         BrowserAction handler = actionHandlers.get(actionType);
         if (handler != null) {
-            boolean success = handler.execute(page, smartLocator, plan);
+            // Always use the currently active page
+            Page activePage = getActivePage();
+            boolean success = handler.execute(activePage, smartLocator, plan);
             plan.setExecuted(true);
             return success;
         } else {
-             System.out.println("Unknown action: " + stepText);
-             plan.setExecuted(true);
-             return true; 
+            System.err.println("Unknown action: " + actionType + " for step: " + stepText);
+            return false;
         }
     }
+    
+    /**
+     * Get the currently active page (handles multiple windows)
+     */
+    private Page getActivePage() {
+        if (page != null && page.context() != null) {
+            java.util.List<Page> pages = page.context().pages();
+            if (!pages.isEmpty()) {
+                // Return the last interacted page or the last one in the list
+                return pages.get(pages.size() - 1);
+            }
+        }
+        return page; // Fallback to original page
+    }
+
 
     public void closeBrowser() {
         if (browser != null) browser.close();
