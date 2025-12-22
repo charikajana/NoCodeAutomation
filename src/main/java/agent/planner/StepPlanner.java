@@ -57,6 +57,9 @@ public class StepPlanner {
         addPattern("check", "^(?:check|tick|mark)\\s+(?:the\\s+)?(?:checkbox\\s+|box\\s+)?[\"']?([^\"']+)[\"']?", 1, -1, -1);
         addPattern("uncheck", "^(?:uncheck|untick|unmark)\\s+(?:the\\s+)?(?:checkbox\\s+|box\\s+)?[\"']?([^\"']+)[\"']?", 1, -1, -1);
 
+        // CLICK VARIANTS - Must be BEFORE generic click pattern (order matters!)
+        addPattern("double_click", "^double\\s+(?:click|tap)\\s+(?:on\\s+)?(?:the\\s+)?[\"']?([^\"']+)[\"']?", 1, -1, -1);
+        addPattern("right_click", "^right\\s+(?:click|tap)\\s+(?:on\\s+)?(?:the\\s+)?[\"']?([^\"']+)[\"']?", 1, -1, -1);
         addPattern("click", "^(?:click|tap|press|hit)\\s+(?:on\\s+)?(?:the\\s+)?[\"']?([^\"']+)[\"']?", 1, -1, -1);
     }
 

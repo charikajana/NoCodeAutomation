@@ -15,7 +15,7 @@ public class AgentApplication {
         SmartStepParser planner = new SmartStepParser();
         BrowserService browserService = new BrowserService();
 
-        List<String> steps = reader.readSteps("src/main/resources/features/WebTable.feature");
+        List<String> steps = reader.readSteps("src/main/resources/features/WaitPatterns.feature");
 
         browserService.startBrowser();
 

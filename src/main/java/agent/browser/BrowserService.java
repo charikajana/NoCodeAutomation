@@ -19,6 +19,8 @@ public class BrowserService {
         actionHandlers.put("navigate", new NavigateAction());
         actionHandlers.put("fill", new FillAction());
         actionHandlers.put("click", new ClickAction());
+        actionHandlers.put("double_click", new DoubleClickAction());
+        actionHandlers.put("right_click", new RightClickAction());
         actionHandlers.put("check", new CheckAction());
         actionHandlers.put("uncheck", new UncheckAction());
         actionHandlers.put("verify", new VerifyTextAction());
