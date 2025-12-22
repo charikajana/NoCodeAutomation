@@ -64,6 +64,11 @@ public class StepPlanner {
         addPattern("fill", "^(?:fill|enter|type|input|write)\\s+(?:the\\s+)?([\\w\\s\\-]+?)(?:[: ])?\\s+[\"']([^\"']+)[\"']", 1, 2, -1);
 
         // DROPDOWN / SELECT PATTERNS
+        // Multi-value select (MUST BE FIRST for priority): Select "A" and "B" and "C" from "Dropdown"
+        // This pattern captures the first value and dropdown name, then we'll extract all values in post-processing
+        addPattern("select_multi", "^(?:select|choose)\\s+[\"']([^\"']+)[\"'](?:\\s+and\\s+[\"'][^\"']+[\"'])+\\s+(?:from|in|for)\\s+(?:the\\s+)?[\"']?([^\"']+)[\"']?", 2, 1, -1);
+        
+        // Single value select patterns
         addPattern("select", "^(?:select|choose)\\s+[\"']([^\"']+)[\"']\\s+(?:from|in|for)\\s+(?:the\\s+)?[\"']?([^\"']+)[\"']?", 2, 1, -1);
         addPattern("select", "^(?:select|choose)\\s+(?:the\\s+)?[\"']?([^\"']+)[\"']?\\s+(?:from|in|for)\\s+[\"']([^\"']+)[\"']", 1, 2, -1);
         addPattern("select", "^(?:set|change)\\s+(?:the\\s+)?(?:dropdown\\s+|select\\s+)?[\"']?([^\"']+)[\"']?\\s+to\\s+[\"']([^\"']+)[\"']", 1, 2, -1);
@@ -93,7 +98,21 @@ public class StepPlanner {
                     plan.setElementName(stripQuotes(m.group(p.elementGroup)));
                 }
                 
-                if (p.valueGroup != -1 && m.groupCount() >= p.valueGroup) {
+                // Special handling for select_multi: extract ALL quoted values
+                if ("select_multi".equals(p.actionType)) {
+                    List<String> allValues = extractAllQuoted(cleanStep);
+                    if (allValues.size() > 1) {
+                        // Remove the last value which is the dropdown name, keep only option values
+                        List<String> optionValues = allValues.subList(0, allValues.size() - 1);
+                        // Join all values with semicolon separator (safer than comma which may appear in option names)
+                        plan.setValue(String.join(";", optionValues));
+                    } else if (allValues.size() == 1) {
+                        // Fallback - single value (shouldn't match select_multi pattern but just in case)
+                        plan.setValue(allValues.get(0));
+                    }
+                    // Change action type to "select" so SelectAction can handle it
+                    plan.setActionType("select");
+                } else if (p.valueGroup != -1 && m.groupCount() >= p.valueGroup) {
                     plan.setValue(stripQuotes(m.group(p.valueGroup)));
                 }
 
