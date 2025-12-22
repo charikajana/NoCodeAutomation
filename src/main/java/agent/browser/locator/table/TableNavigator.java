@@ -1,7 +1,8 @@
-package agent.browser.locator;
+package agent.browser.locator.table;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import agent.browser.locator.builders.DynamicTableXPathBuilder;
 
 /**
  * Handles complex table interactions by resolving row contexts dynamically.

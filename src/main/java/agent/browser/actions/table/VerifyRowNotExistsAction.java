@@ -1,7 +1,9 @@
-package agent.browser.actions;
+package agent.browser.actions.table;
+
+import agent.browser.actions.BrowserAction;
 
 import agent.browser.SmartLocator;
-import agent.browser.locator.DynamicTableXPathBuilder;
+import agent.browser.locator.builders.DynamicTableXPathBuilder;
 import agent.planner.ActionPlan;
 import agent.planner.EnhancedActionPlan;
 import com.microsoft.playwright.Locator;

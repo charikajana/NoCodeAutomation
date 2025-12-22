@@ -1,4 +1,4 @@
-package agent.browser.locator;
+package agent.browser.locator.core;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
@@ -117,17 +117,47 @@ public class LocatorFactory {
                  return sibling;
              }
 
-             // 4. Look for cousin select
+             // 4. Before checking cousins, check for React-Select/custom dropdowns
+             // This prevents false matches with unrelated select elements on the page
+             System.out.println("  > No <select> found in immediate vicinity. Checking for custom dropdown patterns...");
+             
+             // 4a. Check for React-Select container as direct sibling of the label
+             // Pattern: <p>Label</p> <div class="react-select-container">...</div>
+             // OR: <p><b>Label</b></p> <div class="react-select-container">...</div> (check parent's sibling)
+             Locator reactSelectSibling = finalLocator.locator("xpath=following-sibling::*[1][contains(@class, 'container') or contains(@class, '-container') or contains(@id, 'react-select')]").first();
+             if (reactSelectSibling.count() > 0) {
+                 System.out.println("  > Found React-Select container as next sibling of label, refining to it.");
+                 return reactSelectSibling;
+             }
+             
+             // 4a-ii. If not found, check parent's next sibling (handles nested labels like <p><b>Text</b></p>)
+             Locator parentSibling = finalLocator.locator("xpath=../following-sibling::*[1][contains(@class, 'container') or contains(@class, '-container') or contains(@id, 'react-select')]").first();
+             if (parentSibling.count() > 0) {
+                 System.out.println("  > Found React-Select container as next sibling of label's parent, refining to it.");
+                 return parentSibling;
+             }
+             
+             // 4b. Check for React-Select in parent's next sibling (nested layouts)
+             // Pattern: <div><div>Label</div></div> <div><div class="react-select-container">...</div></div>
+             Locator parentNextSibling = parent.locator("xpath=following-sibling::*[1]").first();
+             if (parentNextSibling.count() > 0) {
+                 Locator nestedReactSelect = parentNextSibling.locator("div[class*='container'], div[class*='-container'], div[id*='react-select'], div[id*='OptGroup']").first();
+                 if (nestedReactSelect.count() > 0) {
+                     System.out.println("  > Found React-Select container in parent's next sibling, refining to it.");
+                     return nestedReactSelect;
+                 }
+             }
+             
+             // 4c. Last resort: Check for cousin select (but this might match unrelated elements)
              Locator grandParent = finalLocator.locator("xpath=../..");
              Locator cousin = grandParent.locator("select").first();
              if (cousin.count() > 0) {
-                 System.out.println("  > Refining match to cousin select.");
+                 System.out.println("  > Refining match to cousin select (fallback).");
                  return cousin;
              }
              
-             // For select, if we don't find a <select> tag, it might be a custom dropdown (div/span)
-             // We return the original locator and let SelectAction handle it by clicking.
-             System.out.println("  > No <select> found. Assuming custom dropdown/wrapper.");
+             // 5. Return the original wrapper and let SelectAction detect and handle it
+             System.out.println("  > No specific custom dropdown pattern found. Returning wrapper for custom dropdown detection.");
          }
 
          return finalLocator;

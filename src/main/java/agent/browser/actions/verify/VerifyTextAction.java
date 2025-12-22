@@ -1,11 +1,13 @@
-package agent.browser.actions;
+package agent.browser.actions.verify;
+
+import agent.browser.actions.BrowserAction;
 
 import agent.browser.SmartLocator;
 import agent.planner.ActionPlan;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 
-import agent.browser.locator.TableNavigator;
+import agent.browser.locator.table.TableNavigator;
 
 public class VerifyTextAction implements BrowserAction {
     @Override

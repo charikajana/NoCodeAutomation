@@ -1,4 +1,4 @@
-package agent.browser.locator;
+package agent.browser.locator.core;
 
 public class ElementCandidate {
     public String tag = "";

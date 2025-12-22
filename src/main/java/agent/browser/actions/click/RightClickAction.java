@@ -1,4 +1,6 @@
-package agent.browser.actions;
+package agent.browser.actions.click;
+
+import agent.browser.actions.BrowserAction;
 
 import agent.browser.SmartLocator;
 import agent.planner.ActionPlan;

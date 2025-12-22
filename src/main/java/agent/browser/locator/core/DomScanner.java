@@ -1,4 +1,4 @@
-package agent.browser.locator;
+package agent.browser.locator.core;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
