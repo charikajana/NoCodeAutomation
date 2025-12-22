@@ -1,6 +1,8 @@
 package agent.browser;
 
-import agent.browser.locator.*;
+import agent.browser.locator.core.*;
+import agent.browser.locator.builders.*;
+import agent.browser.locator.table.*;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import java.util.List;

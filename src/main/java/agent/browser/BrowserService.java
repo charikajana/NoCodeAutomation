@@ -2,6 +2,14 @@ package agent.browser;
 
 import agent.planner.ActionPlan;
 import agent.browser.actions.*;
+import agent.browser.actions.navigation.*;
+import agent.browser.actions.click.*;
+import agent.browser.actions.input.*;
+import agent.browser.actions.select.*;
+import agent.browser.actions.verify.*;
+import agent.browser.actions.table.*;
+import agent.browser.actions.utils.*;
+import agent.browser.actions.window.*;
 import com.microsoft.playwright.*;
 import java.util.HashMap;
 import java.util.Map;
