@@ -59,13 +59,13 @@ public class LocatorFactory {
          }
 
          boolean isFill = "input".equals(parsedType);
+         boolean isSelect = "select".equals(parsedType);
 
          // Refine for FILL actions if we matched a non-input wrapper
          if (isFill && !"input".equals(foundTag) && !"textarea".equals(foundTag)) {
              // 1. If label with 'for', use that
              if ("label".equals(foundTag) && foundFor != null && !foundFor.isEmpty()) {
                  System.out.println("  > Refining label match to linked input #" + foundFor);
-                 // IDs are usually global, so page.locator is safer, but scope.locator("#id") works if ID is inside scope.
                  return page.locator("#" + foundFor);
              }
              // 2. Look for nested input/textarea
@@ -76,7 +76,6 @@ public class LocatorFactory {
              }
              
              // 3. Look for sibling input (via parent)
-             // This handles: <div class="group"><label>Name</label><input></div>
              Locator parent = finalLocator.locator("xpath=..");
              Locator sibling = parent.locator("input, textarea").first();
              if (sibling.count() > 0) {
@@ -85,7 +84,6 @@ public class LocatorFactory {
              }
 
              // 4. Look for cousin input (via grandparent)
-             // This handles: <div class="row"><div class="col"><label>Name</label></div><div class="col"><input></div></div>
              Locator grandParent = finalLocator.locator("xpath=../..");
              Locator cousin = grandParent.locator("input, textarea").first();
              if (cousin.count() > 0) {
@@ -93,10 +91,43 @@ public class LocatorFactory {
                  return cousin;
              }
              
-             // If we reached here, we have a match (e.g. valid text in a div) but it's not an input/textarea
-             // and we couldn't find a related input. Returning it will cause FillAction to crash.
              System.out.println("  > Match found (" + foundTag + ") but not a valid input/textarea. Discarding.");
              return null;
+         }
+
+         // Refine for SELECT actions if we matched a non-select wrapper
+         if (isSelect && !"select".equals(foundTag)) {
+             // 1. If label with 'for', use that
+             if ("label".equals(foundTag) && foundFor != null && !foundFor.isEmpty()) {
+                 System.out.println("  > Refining label match to linked select #" + foundFor);
+                 return page.locator("#" + foundFor);
+             }
+             // 2. Look for nested select
+             Locator nested = finalLocator.locator("select").first();
+             if (nested.count() > 0) {
+                 System.out.println("  > Refining wrapper match to nested select.");
+                 return nested;
+             }
+             
+             // 3. Look for sibling select
+             Locator parent = finalLocator.locator("xpath=..");
+             Locator sibling = parent.locator("select").first();
+             if (sibling.count() > 0) {
+                 System.out.println("  > Refining match to sibling select.");
+                 return sibling;
+             }
+
+             // 4. Look for cousin select
+             Locator grandParent = finalLocator.locator("xpath=../..");
+             Locator cousin = grandParent.locator("select").first();
+             if (cousin.count() > 0) {
+                 System.out.println("  > Refining match to cousin select.");
+                 return cousin;
+             }
+             
+             // For select, if we don't find a <select> tag, it might be a custom dropdown (div/span)
+             // We return the original locator and let SelectAction handle it by clicking.
+             System.out.println("  > No <select> found. Assuming custom dropdown/wrapper.");
          }
 
          return finalLocator;

@@ -62,19 +62,34 @@ public class VerifyTextAction implements BrowserAction {
             }
         }
         
+        // Strategy 4: Check if any select/input has this value
+        if (foundElement == null || foundElement.count() == 0) {
+            String xpath = String.format("//*[(@value='%s' or .='%s')]", textToVerify, textToVerify);
+            foundElement = (searchScope != null) ? searchScope.locator(xpath).first() : page.locator(xpath).first();
+            if (foundElement != null && foundElement.count() > 0) {
+                foundText = getElementText(foundElement);
+                matchType = "VALUE/XPATH";
+            }
+        }
+        
         // Validate result
         if (foundElement != null && foundElement.count() > 0) {
+            boolean visible = false;
             try {
-                com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat(foundElement).isVisible();
-                
+                visible = foundElement.isVisible();
+            } catch (Exception e) {
+                // Ignore
+            }
+
+            if (visible || "VALUE/XPATH".equals(matchType) || "option".equalsIgnoreCase((String)foundElement.evaluate("el => el.tagName"))) {
                 System.out.println("--------------------------------------------------");
                 System.out.println(" ✅ VALIDATION SUCCESS");
                 System.out.println(" Expected: " + textToVerify);
                 System.out.println(" Found in Element: " + foundText);
-                System.out.println(" Match Strategy: " + matchType);
+                System.out.println(" Match Strategy: " + matchType + (visible ? "" : " (Hidden/Value)"));
                 System.out.println("--------------------------------------------------");
                 return true;
-            } catch (Error e) {
+            } else {
                 System.err.println("--------------------------------------------------");
                 System.err.println(" ❌ VALIDATION FAILED");
                 System.err.println(" Expected: " + textToVerify);

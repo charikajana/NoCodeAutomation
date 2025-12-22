@@ -63,6 +63,11 @@ public class StepPlanner {
         addPattern("fill", "^(?:fill|enter|type|input)\\s+(?:the\\s+)?(.+?)\\s+with\\s+[\"']([^\"']+)[\"']", 1, 2, -1);
         addPattern("fill", "^(?:fill|enter|type|input|write)\\s+(?:the\\s+)?([\\w\\s\\-]+?)(?:[: ])?\\s+[\"']([^\"']+)[\"']", 1, 2, -1);
 
+        // DROPDOWN / SELECT PATTERNS
+        addPattern("select", "^(?:select|choose)\\s+[\"']([^\"']+)[\"']\\s+(?:from|in|for)\\s+(?:the\\s+)?[\"']?([^\"']+)[\"']?", 2, 1, -1);
+        addPattern("select", "^(?:select|choose)\\s+(?:the\\s+)?[\"']?([^\"']+)[\"']?\\s+(?:from|in|for)\\s+[\"']([^\"']+)[\"']", 1, 2, -1);
+        addPattern("select", "^(?:set|change)\\s+(?:the\\s+)?(?:dropdown\\s+|select\\s+)?[\"']?([^\"']+)[\"']?\\s+to\\s+[\"']([^\"']+)[\"']", 1, 2, -1);
+
         addPattern("check", "^(?:check|tick|mark)\\s+(?:the\\s+)?(?:checkbox\\s+|box\\s+)?[\"']?([^\"']+)[\"']?", 1, -1, -1);
         addPattern("uncheck", "^(?:uncheck|untick|unmark)\\s+(?:the\\s+)?(?:checkbox\\s+|box\\s+)?[\"']?([^\"']+)[\"']?", 1, -1, -1);
 

@@ -15,7 +15,7 @@ public class AgentApplication {
         SmartStepParser planner = new SmartStepParser();
         BrowserService browserService = new BrowserService();
 
-        List<String> steps = reader.readSteps("src/main/resources/features/Links.feature");
+        List<String> steps = reader.readSteps("src/main/resources/features/Select.feature");
 
         browserService.startBrowser();
 
