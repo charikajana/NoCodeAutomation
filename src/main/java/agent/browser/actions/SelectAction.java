@@ -135,31 +135,39 @@ public class SelectAction implements BrowserAction {
             // Step 1: Open dropdown (only if not already open)
             if (isFirstSelection) {
                 try {
-                    // Try clicking the control div specifically for React-Select
-                    Locator control = wrapper.locator("[class*='control'], [class*='css-'][class*='-control']").first();
-                    if (control.count() > 0) {
-                        System.out.println("  🎯 Clicking React-Select control...");
-                        control.click(new Locator.ClickOptions().setTimeout(5000));
-                    } else {
-                        System.out.println("  🎯 Clicking dropdown wrapper...");
-                        wrapper.click(new Locator.ClickOptions().setTimeout(5000).setForce(true));
-                    }
+                    // Check if menu is already open (might be open from previous actions like deselect)
+                    Locator existingMenu = wrapper.locator("[class*='menu']").first();
+                    boolean menuAlreadyOpen = existingMenu.count() > 0 && existingMenu.isVisible();
                     
-                    System.out.println("  ⏳ Clicked dropdown, waiting for options menu...");
-                    Thread.sleep(500); // Wait for animation
-                    
-                    // Wait for menu container to appear
-                    Locator menu = wrapper.locator("[class*='menu']").first();
-                    if (menu.count() > 0) {
-                        menu.waitFor(new Locator.WaitForOptions().setTimeout(5000));
-                        System.out.println("  ✅ Dropdown menu container appeared");
+                    if (menuAlreadyOpen) {
+                        System.out.println("  ✓ Menu is already open, skipping click...");
                     } else {
-                        // Fallback: wait for any option elements to appear
-                        System.out.println("  ⏳ No menu container found, waiting for options...");
-                        page.locator("[id*='react-select'][id*='option'], div[class*='option'], [role='option']")
-                            .first()
-                            .waitFor(new Locator.WaitForOptions().setTimeout(5000).setState(com.microsoft.playwright.options.WaitForSelectorState.VISIBLE));
-                        System.out.println("  ✅ Options appeared");
+                        // Try clicking the control div specifically for React-Select
+                        Locator control = wrapper.locator("[class*='control'], [class*='css-'][class*='-control']").first();
+                        if (control.count() > 0) {
+                            System.out.println("  🎯 Clicking React-Select control...");
+                            control.click(new Locator.ClickOptions().setTimeout(5000));
+                        } else {
+                            System.out.println("  🎯 Clicking dropdown wrapper...");
+                            wrapper.click(new Locator.ClickOptions().setTimeout(5000).setForce(true));
+                        }
+                        
+                        System.out.println("  ⏳ Clicked dropdown, waiting for options menu...");
+                        Thread.sleep(500); // Wait for animation
+                        
+                        // Wait for menu container to appear
+                        Locator menu = wrapper.locator("[class*='menu']").first();
+                        if (menu.count() > 0) {
+                            menu.waitFor(new Locator.WaitForOptions().setTimeout(5000));
+                            System.out.println("  ✅ Dropdown menu container appeared");
+                        } else {
+                            // Fallback: wait for any option elements to appear
+                            System.out.println("  ⏳ No menu container found, waiting for options...");
+                            page.locator("[id*='react-select'][id*='option'], div[class*='option'], [role='option']")
+                                .first()
+                                .waitFor(new Locator.WaitForOptions().setTimeout(5000).setState(com.microsoft.playwright.options.WaitForSelectorState.VISIBLE));
+                            System.out.println("  ✅ Options appeared");
+                        }
                     }
                     
                 } catch (Exception e) {

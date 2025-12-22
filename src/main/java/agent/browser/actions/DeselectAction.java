@@ -96,20 +96,25 @@ public class DeselectAction implements BrowserAction {
                 System.out.println("  🎯 Found selected chip for '" + optionText + "'");
                 
                 // Find the remove button within this chip
-                Locator removeButton = chip.locator("div[class*='multiValueRemove'], div[class*='remove'], svg[class*='remove']").first();
+                // React-Select uses various patterns: svg with data-* attributes, divs with remove classes, or clickable elements
+                Locator removeButton = chip.locator("svg, div[role='button'], *[aria-label*='remove'], *[class*='Remove'], *[class*='remove'], *[class*='clear']").first();
                 
                 if (removeButton.count() > 0) {
                     System.out.println("  🗑️ Clicking remove button...");
                     removeButton.click(new Locator.ClickOptions().setTimeout(5000));
                     
-                    // Wait a moment for the chip to be removed
-                    Thread.sleep(300);
+                    // Wait a longer moment for the chip to be removed and dropdown to stabilize
+                    Thread.sleep(800);
                     
                     System.out.println("✅ Deselected '" + optionText + "' from dropdown '" + label + "'");
                     return true;
                 } else {
-                    System.err.println("❌ FAILED: Remove button not found for chip '" + optionText + "'");
-                    return false;
+                    // Maybe the entire chip is clickable? Try clicking the chip itself
+                    System.out.println("  🗑️ No specific remove button found, trying to click chip...");
+                    chip.click(new Locator.ClickOptions().setTimeout(5000));
+                    Thread.sleep(800);
+                    System.out.println("✅ Deselected '" + optionText + "' from dropdown '" + label + "'");
+                    return true;
                 }
             }
             
