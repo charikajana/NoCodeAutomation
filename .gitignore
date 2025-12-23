@@ -18,6 +18,8 @@ docs/
 logs/
 *.log
 .agent
+!.agent/workflows/
+!logs/
 
 ### Eclipse ###
 .apt_generated

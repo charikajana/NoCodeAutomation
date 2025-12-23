@@ -25,7 +25,7 @@ public class DomScanner {
     private List<ElementCandidate> scanInternal(Page page, Frame frame, Locator scope) {
         String js = "root => {" +
                 "  const base = root || document;" +
-                "  const candidates = Array.from(base.querySelectorAll('button, a, input, textarea, select, [role=\"button\"], label, span, div, p, h1, h2, h3, h4, h5, h6'));" +
+                "  const candidates = Array.from(base.querySelectorAll('button, a, input, textarea, select, [role=\"button\"], label, li, span, div, p, h1, h2, h3, h4, h5, h6'));" +
                 "  return candidates.map(el => {" +
                 "    const rect = el.getBoundingClientRect();" +
                 "    const visible = rect.width > 0 && rect.height > 0 && window.getComputedStyle(el).visibility !== 'hidden';" +
@@ -46,15 +46,24 @@ public class DomScanner {
                 "  }).filter(item => item !== null);" +
                 "}";
 
-        Object result;
-        if (scope != null) {
-            result = scope.evaluate(js);
-        } else if (frame != null) {
-            result = frame.evaluate("() => (" + js + ")()");
-        } else {
-            result = page.evaluate("() => (" + js + ")()");
+        Object result = new ArrayList<>();
+        try {
+            if (scope != null) {
+                result = scope.evaluate(js);
+            } else if (frame != null) {
+                if (!frame.isDetached()) {
+                    result = frame.evaluate("() => (" + js + ")()");
+                }
+            } else {
+                result = page.evaluate("() => (" + js + ")()");
+            }
+        } catch (Exception e) {
+            // Log and return empty results for detached frames or cross-origin issues
+            // System.err.println("Warning: Frame detachment or security error during scan: " + e.getMessage());
+            return new ArrayList<>();
         }
 
+        if (result == null) return new ArrayList<>();
         List<Map<String, String>> rawList = (List<Map<String, String>>) result;
         List<ElementCandidate> candidates = new ArrayList<>();
 

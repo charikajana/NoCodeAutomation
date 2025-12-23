@@ -296,10 +296,8 @@ public class SmartStepParser {
             }
         }
         
-        // Special handling for click_in_row and click_specific_in_row actions
-        // Set rowAnchor to enable row-scoped element finding
-        if (("click_in_row".equals(actionType) || "click_specific_in_row".equals(actionType)) 
-            && plan.getRowConditionValue() != null) {
+        // Set rowAnchor to enable row-scoped element finding if we have a row condition
+        if (plan.getRowConditionValue() != null) {
             plan.setRowAnchor(plan.getRowConditionValue());
             logger.debug("Setting rowAnchor: {}", plan.getRowConditionValue());
         }
@@ -327,7 +325,7 @@ public class SmartStepParser {
                 plan.setIsBulkAction(true);
                 plan.setBulkActionType(value);
             }
-            case "buttonName", "frameName" -> plan.setElementName(value);
+            case "buttonName", "frameName", "elementName" -> plan.setElementName(value);
             case "searchValue" -> plan.setValue(value);
         }
     }

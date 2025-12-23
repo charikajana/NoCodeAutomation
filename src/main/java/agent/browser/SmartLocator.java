@@ -109,6 +109,7 @@ public class SmartLocator {
             logger.debug("Element '{}' not found in main page. Searching across all iframes...", name);
             for (Frame frame : page.frames()) {
                 if (frame == page.mainFrame()) continue; // Already searched
+                if (frame.isDetached()) continue;
                 
                 loc = findInContext(name, parsedType, frame, null);
                 if (loc != null) {
@@ -130,13 +131,15 @@ public class SmartLocator {
             
             // Check ID or other attributes via evaluation if name doesn't match
             try {
+                if (frame.isDetached()) continue;
                 String frameId = (String) frame.evaluate("() => window.frameElement ? window.frameElement.id : ''");
                 if (frameAnchor.equalsIgnoreCase(frameId)) return frame;
                 
+                if (frame.isDetached()) continue;
                 String frameTitle = (String) frame.evaluate("() => window.frameElement ? window.frameElement.title : ''");
                 if (frameAnchor.equalsIgnoreCase(frameTitle)) return frame;
             } catch (Exception e) {
-                // Ignore errors in cross-origin frames
+                // Ignore errors in detached or cross-origin frames
             }
         }
         return null;

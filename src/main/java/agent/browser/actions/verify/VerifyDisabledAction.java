@@ -14,12 +14,34 @@ public class VerifyDisabledAction implements BrowserAction {
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
         String targetName = plan.getElementName();
-        Locator elDisabled = locator.waitForSmartElement(targetName, "radio", null, plan.getFrameAnchor());
+        Locator scope = null;
+
+        if (plan.getRowAnchor() != null) {
+            agent.browser.locator.table.TableNavigator navigator = new agent.browser.locator.table.TableNavigator();
+            if (plan instanceof agent.planner.EnhancedActionPlan) {
+                agent.planner.EnhancedActionPlan enhanced = (agent.planner.EnhancedActionPlan) plan;
+                String columnName = enhanced.getRowConditionColumn();
+                String columnValue = enhanced.getRowConditionValue();
+                if (columnName != null && columnValue != null) {
+                    scope = navigator.findRowByColumnValue(page, columnName, columnValue);
+                } else {
+                    scope = navigator.findRowByAnchor(page, plan.getRowAnchor());
+                }
+            } else {
+                scope = navigator.findRowByAnchor(page, plan.getRowAnchor());
+            }
+            if (scope == null) {
+                logger.failure("Row not found for anchor: {}", plan.getRowAnchor());
+                return false;
+            }
+        }
+
+        Locator element = locator.waitForSmartElement(targetName, null, scope, plan.getFrameAnchor());
         
-        if (elDisabled != null) {
-            boolean isEnabled = elDisabled.isEnabled();
-            if ("label".equals(elDisabled.evaluate("el => el.tagName.toLowerCase()"))) {
-                String forAttr = (String) elDisabled.getAttribute("for");
+        if (element != null) {
+            boolean isEnabled = element.isEnabled();
+            if ("label".equals(element.evaluate("el => el.tagName.toLowerCase()"))) {
+                String forAttr = (String) element.getAttribute("for");
                 if (forAttr != null) {
                      isEnabled = page.locator("#" + forAttr).isEnabled();
                 }

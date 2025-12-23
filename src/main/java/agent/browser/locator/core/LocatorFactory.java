@@ -33,7 +33,13 @@ public class LocatorFactory {
          // Safer to use scope.locator("#id") if strict.
          
          if (foundId != null && !foundId.isEmpty()) {
-             finalLocator = (scope != null) ? scope.locator("#" + foundId) : page.locator("#" + foundId);
+             // Use tag + id and filter by text to disambiguate if IDs are reused (common in DemoQA)
+             Locator base = (scope != null) ? scope.locator(foundTag + "#" + foundId) : page.locator(foundTag + "#" + foundId);
+             if (foundText != null && !foundText.isEmpty() && foundText.length() < 100) {
+                 finalLocator = base.filter(new Locator.FilterOptions().setHasText(foundText)).first();
+             } else {
+                 finalLocator = base.first();
+             }
          } 
          else if (foundText != null && !foundText.isEmpty() && foundText.length() < 100) {
              if (score >= 150) {

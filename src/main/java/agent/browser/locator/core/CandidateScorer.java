@@ -10,7 +10,14 @@ public class CandidateScorer {
         // pre-calculate clean name? Or do it here. 
         // Optimization: Clean name could be passed in, but doing it here keeps interface simple.
         // Enhanced clean name - remove common suffixes like "icon", "button", etc.
-        String cleanName = lowerName.replaceAll("\\s+(button|btn|link|input|field|tab|icon)$", "").trim();
+        String cleanName = lowerName;
+        boolean changed;
+        do {
+            changed = false;
+            String before = cleanName;
+            cleanName = cleanName.replaceAll("\\s+(button|btn|link|input|field|tab|icon|radio|checkbox|dropdown|select|box|menu)$", "").trim();
+            if (!before.equals(cleanName)) changed = true;
+        } while (changed);
 
         boolean isFill = "input".equals(parsedType);
         boolean isCheck = "check".equals(parsedType) || "checkbox".equals(parsedType) || "radio".equals(parsedType);

@@ -107,13 +107,24 @@ public class PatternRegistry {
             "^(?:validate|verify|assert|check)\\s+[\"']([^\"']+)[\"'](?:\\s+message)?\\s+is\\s+(?:displayed|visible|present|shown)", 
             -1, 1, -1);
         
+        // State verification (Enabled/Disabled)
+        // State verification (Enabled/Disabled)
+        // Specific phrasal variations first to avoid greedy capture issues
         register.add("verify_enabled", 
-            "^(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+)?enabled", 
-            1, -1, -1);
+            "^(?:then\\s+)?(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+not\\s+disabled|should\\s+be\\s+enabled)(?:\\s+in\\s+(?:the\\s+)?(?:row|record)\\s+(?:identifying|for|with|containing)\\s+[\"']([^\"']+)[\"'])?$", 
+            1, -1, 2);
         
         register.add("verify_disabled", 
-            "^(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+)?disabled", 
-            1, -1, -1);
+            "^(?:then\\s+)?(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+not\\s+enabled|should\\s+be\\s+disabled)(?:\\s+in\\s+(?:the\\s+)?(?:row|record)\\s+(?:identifying|for|with|containing)\\s+[\"']([^\"']+)[\"'])?$", 
+            1, -1, 2);
+
+        register.add("verify_enabled", 
+            "^(?:then\\s+)?(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+)?(?:enabled|isEnabled|active|clickable|interactive)(?:\\s+in\\s+(?:the\\s+)?(?:row|record)\\s+(?:identifying|for|with|containing)\\s+[\"']([^\"']+)[\"'])?$", 
+            1, -1, 2);
+        
+        register.add("verify_disabled", 
+            "^(?:then\\s+)?(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+)?(?:disabled|isDisabled|greyed out|grayed out|inactive|read-only|readonly|restricted)(?:\\s+in\\s+(?:the\\s+)?(?:row|record)\\s+(?:identifying|for|with|containing)\\s+[\"']([^\"']+)[\"'])?$", 
+            1, -1, 2);
         
         register.add("verify_not", 
             "^(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+[\"']([^\"']+)[\"']\\s+(?:is\\s+)?not\\s+(?:displayed|visible|present|shown)", 
@@ -131,6 +142,15 @@ public class PatternRegistry {
             "^(?:validate|verify|assert|check|should be)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+|are\\s+)?(?:displayed|visible|present|equals|contains)(?:\\s+[\"']([^\"']+)[\"'])?", 
             1, 2, -1);
         
+        // State verification (Checked/Selected)
+        register.add("verify_not_selected", 
+            "^(?:then\\s+)?(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+)?(?:not\\s+selected|not\\s+checked|not\\s+chosen|unchecked|off|should\\s+not\\s+be\\s+selected)(?:\\s+in\\s+(?:the\\s+)?(?:row|record)\\s+(?:identifying|for|with|containing)\\s+[\"']([^\"']+)[\"'])?$", 
+            1, -1, 2);
+
+        register.add("verify_selected", 
+            "^(?:then\\s+)?(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+)?(?:selected|checked|on|chosen|should\\s+be\\s+selected)(?:\\s+in\\s+(?:the\\s+)?(?:row|record)\\s+(?:identifying|for|with|containing)\\s+[\"']([^\"']+)[\"'])?$", 
+            1, -1, 2);
+
         // ========================================
         // FILL/INPUT PATTERNS
         // ========================================
@@ -281,6 +301,32 @@ public class PatternRegistry {
         register.add("verify_row_not_exists",
             "^(?:then|and)?\\s*(?:validate|verify|check|ensure)\\s+(?:that\\s+)?(?:the\\s+)?row\\s+should\\s+not\\s+(?:be\\s+)?(?:present|exist)\\s+where\\s+[\"']?([^\"']+)[\"']?\\s+is\\s+[\"']([^\"']+)[\"']",
             Map.of("conditionColumn", 1, "conditionValue", 2));
+
+        // State verification in rows
+        register.add("verify_enabled",
+            "^(?:then|and)?\\s*(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+not\\s+disabled|should\\s+be\\s+enabled)\\s+in\\s+(?:the\\s+)?(?:row|record)\\s+where\\s+[\"']([^\"']+)[\"']\\s+is\\s+[\"']([^\"']+)[\"']",
+            Map.of("elementName", 1, "conditionColumn", 2, "conditionValue", 3));
+
+        register.add("verify_disabled",
+            "^(?:then|and)?\\s*(?:validate|verify|assert|check|ensure)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+not\\s+enabled|should\\s+be\\s+disabled)\\s+in\\s+(?:the\\s+)?(?:row|record)\\s+where\\s+[\"']([^\"']+)[\"']\\s+is\\s+[\"']([^\"']+)[\"']",
+            Map.of("elementName", 1, "conditionColumn", 2, "conditionValue", 3));
+
+        register.add("verify_enabled",
+            "^(?:then|and)?\\s*(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+)?(?:enabled|isEnabled|active|clickable|interactive)\\s+in\\s+(?:the\\s+)?(?:row|record)\\s+where\\s+[\"']([^\"']+)[\"']\\s+is\\s+[\"']([^\"']+)[\"']",
+            Map.of("elementName", 1, "conditionColumn", 2, "conditionValue", 3));
+
+        register.add("verify_disabled",
+            "^(?:then|and)?\\s*(?:validate|verify|assert|check|ensure)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+)?(?:disabled|isDisabled|greyed out|grayed out|inactive|read-only|readonly|restricted)\\s+in\\s+(?:the\\s+)?(?:row|record)\\s+where\\s+[\"']([^\"']+)[\"']\\s+is\\s+[\"']([^\"']+)[\"']",
+            Map.of("elementName", 1, "conditionColumn", 2, "conditionValue", 3));
+
+        // Selection verification in rows
+        register.add("verify_not_selected",
+            "^(?:then|and)?\\s*(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+not\\s+selected|is\\s+not\\s+checked|is\\s+not\\s+chosen|is\\s+unchecked|is\\s+off|should\\s+not\\s+be\\s+selected)\\s+in\\s+(?:the\\s+)?(?:row|record)\\s+where\\s+[\"']([^\"']+)[\"']\\s+is\\s+[\"']([^\"']+)[\"']",
+            Map.of("elementName", 1, "conditionColumn", 2, "conditionValue", 3));
+
+        register.add("verify_selected",
+            "^(?:then|and)?\\s*(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+)?(?:selected|checked|on|chosen|should\\s+be\\s+selected)\\s+in\\s+(?:the\\s+)?(?:row|record)\\s+where\\s+[\"']([^\"']+)[\"']\\s+is\\s+[\"']([^\"']+)[\"']",
+            Map.of("elementName", 1, "conditionColumn", 2, "conditionValue", 3));
 
         // ========================================
         // BROWSER LIFECYCLE

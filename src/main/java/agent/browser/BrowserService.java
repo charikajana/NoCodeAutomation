@@ -86,10 +86,13 @@ public class BrowserService {
         actionHandlers.put("verify_modal_not_visible", new VerifyModalAction());
         actionHandlers.put("close_modal", new CloseModalAction());
         
-        // Multiselect list handling
+        // Multiselect list and individual selection handling
+        VerifyCheckedAction checkVerify = new VerifyCheckedAction();
         actionHandlers.put("multiselect_item", new MultiselectAction());
-        actionHandlers.put("verify_selected", new VerifySelectionAction());
-        actionHandlers.put("verify_not_selected", new VerifySelectionAction());
+        actionHandlers.put("verify_selected", checkVerify);
+        actionHandlers.put("verify_not_selected", checkVerify);
+        actionHandlers.put("verify_checked", checkVerify);
+        actionHandlers.put("verify_unchecked", checkVerify);
     }
 
     public void startBrowser() {
