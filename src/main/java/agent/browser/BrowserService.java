@@ -10,6 +10,7 @@ import agent.browser.actions.verify.*;
 import agent.browser.actions.table.*;
 import agent.browser.actions.utils.*;
 import agent.browser.actions.window.*;
+import agent.browser.actions.alert.*;
 import com.microsoft.playwright.*;
 import java.util.HashMap;
 import java.util.Map;
@@ -62,6 +63,11 @@ public class BrowserService {
         actionHandlers.put("switch_to_main_window", windowMgmt);
         actionHandlers.put("close_current_window", windowMgmt);
         actionHandlers.put("close_window", windowMgmt);
+        
+        // Alert handling
+        actionHandlers.put("accept_alert", new AcceptAlertAction());
+        actionHandlers.put("dismiss_alert", new DismissAlertAction());
+        actionHandlers.put("prompt_alert", new PromptAlertAction());
     }
 
     public void startBrowser() {

@@ -104,6 +104,48 @@ public class SmartStepParser {
             "^(?:close|shut)\\s+(?:the\\s+)?(?:second|new|latest)\\s+(?:window|tab)",
             Map.of());
 
+        // CATEGORY: ALERT HANDLING
+        // Accept alert/confirm - simple
+        addTablePattern("accept_alert",
+            "^(?:accept|click ok on|confirm|click ok|ok)\\s+(?:the\\s+)?(?:alert|confirm|dialog)",
+            Map.of());
+        
+        // Accept alert with message verification - "with message"
+        addTablePattern("accept_alert",
+            "^(?:accept|confirm)\\s+(?:the\\s+)?(?:alert|confirm)\\s+(?:with\\s+message|saying|that says)\\s+[\"']([^\"']+)[\"']",
+            Map.of("value", 1));
+        
+        // Verify alert message - "Verify alert says"
+        addTablePattern("accept_alert",
+            "^(?:verify|check|assert)\\s+(?:the\\s+)?(?:alert|confirm)\\s+(?:says|message is|contains|shows)\\s+[\"']([^\"']+)[\"']",
+            Map.of("value", 1));
+        
+        // Verify and accept alert - "Verify and accept alert"
+        addTablePattern("accept_alert",
+            "^(?:verify|check)\\s+(?:and\\s+)?(?:accept|confirm)\\s+(?:the\\s+)?(?:alert|confirm)\\s+(?:with|saying|shows)\\s+[\"']([^\"']+)[\"']",
+            Map.of("value", 1));
+            
+        // Dismiss confirm dialog
+        addTablePattern("dismiss_alert",
+            "^(?:dismiss|cancel|click cancel|click cancel on)\\s+(?:the\\s+)?(?:alert|confirm|dialog)",
+            Map.of());
+            
+        // Handle prompt - accept with text
+        addTablePattern("prompt_alert",
+            "^(?:enter|type|input)\\s+[\"']([^\"']+)[\"']\\s+(?:in|into|to)\\s+(?:the\\s+)?prompt",
+            Map.of("value", 1));
+            
+        // Handle prompt - just accept
+        addTablePattern("prompt_alert",
+            "^(?:accept|confirm|click ok on)\\s+(?:the\\s+)?prompt",
+            Map.of());
+            
+        // Handle prompt - dismiss
+        addTablePattern("prompt_alert",
+            "^(?:dismiss|cancel)\\s+(?:the\\s+)?prompt",
+            Map.of("elementName", "dismiss"));
+
+
         
         // CATEGORY 5: SORTING
         addTablePattern("sort_table",
@@ -156,6 +198,12 @@ public class SmartStepParser {
      * Main parsing method - tries multiple strategies
      */
     public ActionPlan parseStep(String step) {
+        // STRATEGY 0: Check if this is a combined action step (contains multiple actions)
+        if (isCombinedAction(step)) {
+            System.out.println("🔗 Detected Combined Action Step");
+            return parseCombinedActions(step);
+        }
+        
         // STRATEGY 1: Try table-specific patterns first (new features)
         ActionPlan tablePlan = tryTablePatterns(step);
         if (tablePlan != null) {
@@ -179,6 +227,171 @@ public class SmartStepParser {
         
         // STRATEGY 4: LLM Fallback (future - would call OpenAI API here)
         System.err.println("❌ Could not parse step: " + step);
+        return createUnknownPlan(step);
+    }
+    
+    /**
+     * Detects if a step contains multiple actions chained together.
+     * Looks for delimiters: "and", "also", "then", ",", "&"
+     * 
+     * Examples:
+     * - "When Enter FirstName and Enter LastName"
+     * - "When Enter FirstName also Enter LastName also Enter Email"
+     * - "When Enter FirstName, Enter LastName, Enter Email"
+     */
+    private boolean isCombinedAction(String step) {
+        // Remove Gherkin keywords to analyze the actual step content
+        String cleanStep = step.replaceAll("^(?i)(Given|When|Then|And|But)\\s+", "");
+        
+        // Define action-related keywords that indicate this is an action step
+        // (not a table verification or other complex step)
+        String[] actionKeywords = {"enter", "click", "select", "type", "fill", "choose", "check", "uncheck"};
+        
+        boolean hasActionKeyword = false;
+        String lowerStep = cleanStep.toLowerCase();
+        for (String keyword : actionKeywords) {
+            if (lowerStep.contains(keyword)) {
+                hasActionKeyword = true;
+                break;
+            }
+        }
+        
+        // Only process as combined if it's an action step
+        if (!hasActionKeyword) {
+            return false;
+        }
+        
+        // Check for delimiters, but be smart about it
+        // Pattern: word (delimiter) word (delimiter) word
+        // This helps avoid false positives like "First Name and Last Name" (which is a single value)
+        
+        // Count potential action delimiters
+        // Use regex to find patterns like: "Enter X and Enter Y" or "Click X also Click Y"
+        Pattern combinedPattern = Pattern.compile(
+            "(?i)(enter|click|select|type|fill|choose|check|uncheck).*?" +  // First action
+            "\\s+(?:and|also|then|,|&)\\s+" +  // Delimiter
+            "(enter|click|select|type|fill|choose|check|uncheck)",  // Second action
+            Pattern.CASE_INSENSITIVE
+        );
+        
+        Matcher matcher = combinedPattern.matcher(cleanStep);
+        boolean isCombined = matcher.find();
+        
+        if (isCombined) {
+            System.out.println("  ℹ️  Combined action detected with delimiters: and/also/then/,/&");
+        }
+        
+        return isCombined;
+    }
+    
+    /**
+     * Parses a combined action step by splitting it into individual sub-actions.
+     * Supports multiple delimiters: "and", "also", "then", ",", "&"
+     * 
+     * Returns a CompositeActionPlan containing all sub-actions.
+     */
+    private ActionPlan parseCombinedActions(String step) {
+        // Extract the Gherkin keyword (Given/When/Then/And)
+        String gherkinKeyword = "";
+        Pattern keywordPattern = Pattern.compile("^(Given|When|Then|And|But)\\s+", Pattern.CASE_INSENSITIVE);
+        Matcher keywordMatcher = keywordPattern.matcher(step);
+        if (keywordMatcher.find()) {
+            gherkinKeyword = keywordMatcher.group(1);
+        }
+        
+        // Remove Gherkin keyword for splitting
+        String cleanStep = step.replaceAll("^(?i)(Given|When|Then|And|But)\\s+", "");
+        
+        // Split by delimiters while preserving quoted strings
+        // This regex splits by: "and", "also", "then", ",", or "&" (with surrounding spaces)
+        // But NOT if they're inside quotes
+        List<String> subActions = splitByDelimiters(cleanStep);
+        
+        System.out.println("  📋 Split into " + subActions.size() + " sub-actions:");
+        
+        List<ActionPlan> parsedActions = new ArrayList<>();
+        
+        for (int i = 0; i < subActions.size(); i++) {
+            String subAction = subActions.get(i).trim();
+            
+            // For subsequent actions, prepend "And" if no Gherkin keyword exists
+            String fullSubAction = (i == 0 && !gherkinKeyword.isEmpty()) 
+                ? gherkinKeyword + " " + subAction 
+                : "And " + subAction;
+            
+            System.out.println("    " + (i + 1) + ". " + subAction);
+            
+            // Recursively parse each sub-action (this will hit the other strategies)
+            // Temporarily disable combined action detection to avoid infinite recursion
+            ActionPlan subPlan = parseSingleAction(fullSubAction);
+            
+            if (subPlan != null && !"unknown".equals(subPlan.getActionType())) {
+                parsedActions.add(subPlan);
+            } else {
+                System.err.println("      ⚠️ Failed to parse sub-action: " + subAction);
+                // Still add it, but mark as unknown
+                parsedActions.add(createUnknownPlan(fullSubAction));
+            }
+        }
+        
+        // Create a composite action plan
+        CompositeActionPlan compositePlan = new CompositeActionPlan(step, parsedActions);
+        System.out.println("  ✅ Created composite plan with " + parsedActions.size() + " actions");
+        
+        return compositePlan;
+    }
+    
+    /**
+     * Splits a step by delimiters while respecting quoted strings.
+     * Delimiters: "and", "also", "then", ",", "&"
+     */
+    private List<String> splitByDelimiters(String step) {
+        List<String> parts = new ArrayList<>();
+        
+        // Split by common delimiters, but be smart about quotes
+        // Use a regex that matches delimiters outside of quotes
+        String delimiterRegex = "\\s+(?:and|also|then|,|&)\\s+(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)";
+        
+        String[] rawParts = step.split(delimiterRegex);
+        
+        for (String part : rawParts) {
+            String trimmed = part.trim();
+            if (!trimmed.isEmpty()) {
+                parts.add(trimmed);
+            }
+        }
+        
+        // If no split occurred, return the original step as a single action
+        if (parts.isEmpty()) {
+            parts.add(step);
+        }
+        
+        return parts;
+    }
+    
+    /**
+     * Parse a single action without checking for combined actions.
+     * This prevents infinite recursion when parsing sub-actions.
+     */
+    private ActionPlan parseSingleAction(String step) {
+        // Try table patterns
+        ActionPlan tablePlan = tryTablePatterns(step);
+        if (tablePlan != null) {
+            return tablePlan;
+        }
+        
+        // Try legacy patterns
+        ActionPlan legacyPlan = legacyPlanner.plan(step);
+        if (legacyPlan != null && !"unknown".equals(legacyPlan.getActionType())) {
+            return legacyPlan;
+        }
+        
+        // Try intent classification
+        ActionPlan fuzzyPlan = tryIntentClassification(step);
+        if (fuzzyPlan != null) {
+            return fuzzyPlan;
+        }
+        
         return createUnknownPlan(step);
     }
     
