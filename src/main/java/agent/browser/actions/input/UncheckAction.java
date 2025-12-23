@@ -14,7 +14,7 @@ public class UncheckAction implements BrowserAction {
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
         String targetName = plan.getElementName();
-        Locator uncheckbox = locator.waitForSmartElement(targetName, "checkbox");
+        Locator uncheckbox = locator.waitForSmartElement(targetName, "checkbox", null, plan.getFrameAnchor());
         if (uncheckbox != null) {
             try {
                 uncheckbox.uncheck(new Locator.UncheckOptions().setForce(true));

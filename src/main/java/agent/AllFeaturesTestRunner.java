@@ -44,6 +44,9 @@ public class AllFeaturesTestRunner {
             
             boolean featureSuccess = runFeature(featurePath);
             
+            // Small delay between features for system cleanup
+            Thread.sleep(1000);
+            
             if (featureSuccess) {
                 passedFeatures++;
                 logger.success("FEATURE PASSED: {}", featureName);

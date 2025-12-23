@@ -11,6 +11,7 @@ public class ActionPlan {
     private String locatorStrategy; 
     private boolean executed = false;  
     private String rowAnchor;
+    private String frameAnchor;
 
     public ActionPlan(String actionType, String target) {
         this.actionType = actionType;
@@ -44,6 +45,9 @@ public class ActionPlan {
     public String getRowAnchor() { return rowAnchor; }
     public void setRowAnchor(String rowAnchor) { this.rowAnchor = rowAnchor; }
 
+    public String getFrameAnchor() { return frameAnchor; }
+    public void setFrameAnchor(String frameAnchor) { this.frameAnchor = frameAnchor; }
+
     @Override
     public String toString() {
         return "ActionPlan{" +
@@ -55,6 +59,7 @@ public class ActionPlan {
                 ", priority=" + priority +
                 ", locatorStrategy='" + locatorStrategy + '\'' +
                 ", rowAnchor='" + rowAnchor + '\'' +
+                ", frameAnchor='" + frameAnchor + '\'' +
                 ", executed=" + executed +
                 '}';
     }

@@ -22,12 +22,27 @@ public class VerifyNotTextAction implements BrowserAction {
             return false;
         }
 
-        logger.debug("Verifying text ABSENCE: {}", textToNotSee);
-        Locator locNot = page.getByText(textToNotSee).first();
+        // Handle Frame Scoping
+        String frameAnchor = plan.getFrameAnchor();
+        if (frameAnchor != null) {
+            com.microsoft.playwright.Frame frame = locator.findFrame(frameAnchor);
+            if (frame != null) {
+                logger.debug("Scoping negative verification to iframe: '{}'", frameAnchor);
+                return checkAbsence(frame.getByText(textToNotSee).first(), textToNotSee);
+            }
+        }
 
+        // Standard check
+        boolean absent = checkAbsence(page.getByText(textToNotSee).first(), textToNotSee);
+        return absent;
+    }
+
+    private boolean checkAbsence(Locator loc, String textToNotSee) {
         try {
             // Assert HIDDEN (or not visible)
-            com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat(locNot).isHidden();
+            com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat(loc).isHidden(
+                new com.microsoft.playwright.assertions.LocatorAssertions.IsHiddenOptions().setTimeout(5000)
+            );
 
             logger.section("✅ VALIDATION SUCCESS (NEGATIVE)");
             logger.info(" Expected NOT Visible: {}", textToNotSee);
@@ -35,15 +50,8 @@ public class VerifyNotTextAction implements BrowserAction {
             logger.info("--------------------------------------------------");
             return true;
         } catch (Error e) {
-            // Capture text if it mistakenly exists
-            String actualText = "";
-            try { actualText = locNot.innerText().trim(); } catch (Exception ignored) {}
-
             logger.section("❌ VALIDATION FAILED (NEGATIVE)");
-            logger.error(" ERROR: Element is VISIBLE when it should NOT be!");
-            logger.error(" Expected: Element '{}' should NOT be present", textToNotSee);
-            logger.error(" Actual: Element IS VISIBLE -> \"{}\"", actualText);
-            logger.error(" Action Required: Check your test logic or page state");
+            logger.error(" ERROR: Text '{}' is VISIBLE when it should NOT be!", textToNotSee);
             logger.info("--------------------------------------------------");
             return false;
         }

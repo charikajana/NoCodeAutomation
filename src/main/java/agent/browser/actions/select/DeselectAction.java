@@ -23,7 +23,7 @@ public class DeselectAction implements BrowserAction {
         logger.info("🗑️ Deselecting option: '{}' from dropdown: '{}'", optionToRemove, dropdownLabel);
         
         // Step 1: Find the dropdown wrapper
-        Locator dropdownWrapper = locator.waitForSmartElement(dropdownLabel, "select", null);
+        Locator dropdownWrapper = locator.waitForSmartElement(dropdownLabel, "select", null, plan.getFrameAnchor());
         
         if (dropdownWrapper == null) {
             logger.failure("Dropdown element not found: {}", dropdownLabel);

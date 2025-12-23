@@ -14,7 +14,7 @@ public class CheckAction implements BrowserAction {
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
         String targetName = plan.getElementName();
-        Locator checkbox = locator.waitForSmartElement(targetName, "checkbox");
+        Locator checkbox = locator.waitForSmartElement(targetName, "checkbox", null, plan.getFrameAnchor());
         if (checkbox != null) {
             try {
                 checkbox.check();

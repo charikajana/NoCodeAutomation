@@ -15,7 +15,7 @@ public class RightClickAction implements BrowserAction {
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
         String targetName = plan.getElementName();
         
-        Locator clickable = locator.waitForSmartElement(targetName, "button", null);
+        Locator clickable = locator.waitForSmartElement(targetName, "button", null, plan.getFrameAnchor());
         
         if (clickable != null) {
             try {

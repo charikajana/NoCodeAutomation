@@ -25,7 +25,7 @@ public class VerifyTextAction implements BrowserAction {
 
         logger.debug("Verifying text presence: {}", textToVerify);
         
-        // Determine search scope
+        // Determine search scope once
         Locator searchScope = null;
         if (plan.getRowAnchor() != null) {
              TableNavigator navigator = new TableNavigator();
@@ -36,21 +36,74 @@ public class VerifyTextAction implements BrowserAction {
              }
         }
         
+        // Retry logic for robustness
+        long deadline = System.currentTimeMillis() + 10000; // 10s timeout for verification
+        int attempt = 1;
+        
+        while (System.currentTimeMillis() < deadline) {
+            // 1. Handle Frame Scoping
+            String frameAnchor = plan.getFrameAnchor();
+            if (frameAnchor != null) {
+                com.microsoft.playwright.Frame frame = locator.findFrame(frameAnchor);
+                if (frame != null) {
+                    if (performVerification(frame, null, textToVerify)) return true;
+                }
+            }
+
+            // 2. Standard verification (Main Page or Scope)
+            if (performVerification(page, searchScope, textToVerify)) return true;
+
+            // 3. Automatic Cross-Frame verification fallback
+            if (searchScope == null) {
+                try {
+                    for (com.microsoft.playwright.Frame frame : page.frames()) {
+                        if (frame == page.mainFrame()) continue;
+                        if (frame.isDetached()) continue;
+                        
+                        try {
+                            if (performVerification(frame, null, textToVerify)) {
+                                logger.success("Found text '{}' inside iframe: '{}'", textToVerify, frame.name().isEmpty() ? frame.url() : frame.name());
+                                return true;
+                            }
+                        } catch (Exception e) {
+                            // Ignore errors for specific frame verification (e.g. detached during check)
+                        }
+                    }
+                } catch (Exception e) {
+                    // Ignore errors in frame enumeration
+                }
+            }
+            
+            try {
+                Thread.sleep(1000);
+                attempt++;
+                logger.debug("Verification retry {}/10 for: '{}'", attempt, textToVerify);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+
+        logger.failure("Verification timed out: Text '{}' not found after 10 seconds", textToVerify);
+        return false;
+    }
+
+    private boolean performVerification(Object context, Locator searchScope, String textToVerify) {
         // Try multiple strategies for maximum compatibility
         String foundText = null;
         String matchType = null;
         Locator foundElement = null;
         
-        // Strategy 1: Exact text match (most frameworks)
-        foundElement = tryFindText(page, searchScope, textToVerify, true);
+        // Strategy 1: Exact text match
+        foundElement = tryFindText(context, searchScope, textToVerify, true);
         if (foundElement != null && foundElement.count() > 0) {
             foundText = getElementText(foundElement);
             matchType = "EXACT";
         }
         
-        // Strategy 2: Contains match (for partial text)
+        // Strategy 2: Contains match
         if (foundElement == null || foundElement.count() == 0) {
-            foundElement = tryFindText(page, searchScope, textToVerify, false);
+            foundElement = tryFindText(context, searchScope, textToVerify, false);
             if (foundElement != null && foundElement.count() > 0) {
                 foundText = getElementText(foundElement);
                 matchType = "CONTAINS";
@@ -59,17 +112,17 @@ public class VerifyTextAction implements BrowserAction {
         
         // Strategy 3: Case-insensitive match
         if (foundElement == null || foundElement.count() == 0) {
-            foundElement = tryFindTextCaseInsensitive(page, searchScope, textToVerify);
+            foundElement = tryFindTextCaseInsensitive(context, searchScope, textToVerify);
             if (foundElement != null && foundElement.count() > 0) {
                 foundText = getElementText(foundElement);
                 matchType = "CASE-INSENSITIVE";
             }
         }
         
-        // Strategy 4: Check if any select/input has this value
+        // Strategy 4: Value/XPath match
         if (foundElement == null || foundElement.count() == 0) {
             String xpath = String.format("//*[(@value='%s' or .='%s')]", textToVerify, textToVerify);
-            foundElement = (searchScope != null) ? searchScope.locator(xpath).first() : page.locator(xpath).first();
+            foundElement = getLocator(context, searchScope, xpath);
             if (foundElement != null && foundElement.count() > 0) {
                 foundText = getElementText(foundElement);
                 matchType = "VALUE/XPATH";
@@ -79,11 +132,7 @@ public class VerifyTextAction implements BrowserAction {
         // Validate result
         if (foundElement != null && foundElement.count() > 0) {
             boolean visible = false;
-            try {
-                visible = foundElement.isVisible();
-            } catch (Exception e) {
-                // Ignore
-            }
+            try { visible = foundElement.isVisible(); } catch (Exception e) {}
 
             if (visible || "VALUE/XPATH".equals(matchType) || "option".equalsIgnoreCase((String)foundElement.evaluate("el => el.tagName"))) {
                 logger.section("✅ VALIDATION SUCCESS");
@@ -92,55 +141,42 @@ public class VerifyTextAction implements BrowserAction {
                 logger.info(" Match Strategy: {}", matchType + (visible ? "" : " (Hidden/Value)"));
                 logger.info("--------------------------------------------------");
                 return true;
-            } else {
-                logger.section("❌ VALIDATION FAILED");
-                logger.error(" Expected: {}", textToVerify);
-                logger.error(" Issue: Element found but NOT visible");
-                logger.info("--------------------------------------------------");
-                return false;
             }
-        } else {
-            logger.section("❌ VALIDATION FAILED");
-            logger.error(" Expected: {}", textToVerify);
-            logger.error(" Issue: Text NOT found on page");
-            logger.info("--------------------------------------------------");
-            return false;
         }
+        return false;
     }
-    
+
+    /**
+     * Helper to get locator from Page or Frame
+     */
+    private Locator getLocator(Object context, Locator scope, String selector) {
+        if (scope != null) return scope.locator(selector).first();
+        if (context instanceof Page) return ((Page)context).locator(selector).first();
+        if (context instanceof com.microsoft.playwright.Frame) return ((com.microsoft.playwright.Frame)context).locator(selector).first();
+        return null;
+    }
+
     /**
      * Try to find text using exact or contains match
      */
-    private Locator tryFindText(Page page, Locator scope, String text, boolean exact) {
+    private Locator tryFindText(Object context, Locator scope, String text, boolean exact) {
         try {
-            if (scope != null) {
-                return scope.getByText(text, new Locator.GetByTextOptions().setExact(exact)).first();
-            } else {
-                return page.getByText(text, new Page.GetByTextOptions().setExact(exact)).first();
-            }
-        } catch (Exception e) {
-            return null;
-        }
+            if (scope != null) return scope.getByText(text, new Locator.GetByTextOptions().setExact(exact)).first();
+            if (context instanceof Page) return ((Page)context).getByText(text, new Page.GetByTextOptions().setExact(exact)).first();
+            if (context instanceof com.microsoft.playwright.Frame) return ((com.microsoft.playwright.Frame)context).getByText(text, new com.microsoft.playwright.Frame.GetByTextOptions().setExact(exact)).first();
+        } catch (Exception e) {}
+        return null;
     }
     
     /**
-     * Try case-insensitive search (for frameworks that change case)
+     * Try case-insensitive search
      */
-    private Locator tryFindTextCaseInsensitive(Page page, Locator scope, String text) {
-        try {
-            String xpath = String.format(
-                "//*[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '%s')]",
-                text.toLowerCase()
-            );
-            
-            if (scope != null) {
-                return scope.locator(xpath).first();
-            } else {
-                return page.locator(xpath).first();
-            }
-        } catch (Exception e) {
-            return null;
-        }
+    private Locator tryFindTextCaseInsensitive(Object context, Locator scope, String text) {
+        String xpath = String.format(
+            "//*[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '%s')]",
+            text.toLowerCase()
+        );
+        return getLocator(context, scope, xpath);
     }
     
     /**

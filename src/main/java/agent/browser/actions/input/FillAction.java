@@ -27,7 +27,7 @@ public class FillAction implements BrowserAction {
              }
         }
         
-        Locator input = locator.waitForSmartElement(targetName, "input", scope);
+        Locator input = locator.waitForSmartElement(targetName, "input", scope, plan.getFrameAnchor());
         if (input != null) {
             try {
                 input.fill(value != null ? value : "");

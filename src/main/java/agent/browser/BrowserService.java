@@ -11,6 +11,7 @@ import agent.browser.actions.table.*;
 import agent.browser.actions.utils.*;
 import agent.browser.actions.window.*;
 import agent.browser.actions.alert.*;
+import agent.browser.actions.frame.*;
 import agent.utils.LoggerUtil;
 import com.microsoft.playwright.*;
 import java.util.HashMap;
@@ -25,6 +26,7 @@ public class BrowserService {
     private Page page;
     private SmartLocator smartLocator;
     private Map<String, BrowserAction> actionHandlers;
+    private String currentFrameAnchor = null;
 
     public BrowserService() {
         actionHandlers = new HashMap<>();
@@ -71,6 +73,11 @@ public class BrowserService {
         actionHandlers.put("accept_alert", new AcceptAlertAction());
         actionHandlers.put("dismiss_alert", new DismissAlertAction());
         actionHandlers.put("prompt_alert", new PromptAlertAction());
+
+        // Iframe handling
+        SwitchFrameAction frameMgmt = new SwitchFrameAction();
+        actionHandlers.put("switch_to_frame", frameMgmt);
+        actionHandlers.put("switch_to_main_frame", frameMgmt);
     }
 
     public void startBrowser() {
@@ -83,12 +90,25 @@ public class BrowserService {
         
         // Initialize SmartLocator with the page
         smartLocator = new SmartLocator(page);
+        currentFrameAnchor = null;
         logger.success("Browser started successfully");
     }
 
     public boolean executeAction(ActionPlan plan) {
         String actionType = plan.getActionType();
         String stepText = plan.getTarget();
+
+        // Handle frame persistence
+        if ("switch_to_frame".equals(actionType)) {
+            currentFrameAnchor = plan.getElementName();
+        } else if ("switch_to_main_frame".equals(actionType)) {
+            currentFrameAnchor = null;
+        }
+        
+        // If plan doesn't have an explicit frame anchor but we have a persistent one, use it
+        if (plan.getFrameAnchor() == null && currentFrameAnchor != null) {
+            plan.setFrameAnchor(currentFrameAnchor);
+        }
 
         BrowserAction handler = actionHandlers.get(actionType);
         if (handler != null) {
@@ -110,9 +130,16 @@ public class BrowserService {
     private Page getActivePage() {
         if (page != null && page.context() != null) {
             java.util.List<Page> pages = page.context().pages();
-            if (!pages.isEmpty()) {
-                // Return the last interacted page or the last one in the list
-                return pages.get(pages.size() - 1);
+            for (int i = pages.size() - 1; i >= 0; i--) {
+                Page p = pages.get(i);
+                try {
+                    // Simple check to see if page is still alive
+                    p.url(); 
+                    return p;
+                } catch (Exception e) {
+                    // Page likely closed
+                    logger.debug("Skipping closed page: {}", i);
+                }
             }
         }
         return page; // Fallback to original page

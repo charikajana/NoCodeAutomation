@@ -14,7 +14,7 @@ public class VerifyEnabledAction implements BrowserAction {
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
         String targetName = plan.getElementName();
-        Locator elEnabled = locator.waitForSmartElement(targetName, "radio");
+        Locator elEnabled = locator.waitForSmartElement(targetName, "radio", null, plan.getFrameAnchor());
         
         if (elEnabled != null) {
             boolean isEnabled = elEnabled.isEnabled();

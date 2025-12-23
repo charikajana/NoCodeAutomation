@@ -137,6 +137,15 @@ public class SmartStepParser {
         addTablePattern("prompt_alert",
             "^(?:enter|type|input)\\s+[\"']([^\"']+)[\"']\\s+(?:in|into|to)\\s+(?:the\\s+)?prompt",
             Map.of("value", 1));
+
+        // CATEGORY: IFRAME MANAGEMENT
+        addTablePattern("switch_to_frame",
+            "^(?:given|when|then|and|but)?\\s*(?:switch|focus|go)\\s+to\\s+(?:the\\s+)?(?:iframe|frame)\\s+[\"']?([^\"']+)[\"']?",
+            Map.of("frameName", 1));
+            
+        addTablePattern("switch_to_main_frame",
+            "^(?:given|when|then|and|but)?\\s*(?:switch|focus|go)\\s+(?:back\\s+)?to\\s+(?:the\\s+)?(?:main\\s+content|top\\s+frame|parent\\s+frame)",
+            Map.of());
             
         // Handle prompt - just accept
         addTablePattern("prompt_alert",
@@ -206,33 +215,62 @@ public class SmartStepParser {
             logger.info("🔗 Detected Combined Action Step");
             return parseCombinedActions(step);
         }
+
+        // STRATEGY 1: Check for frame-scoped actions ("In iframe 'x', click 'y'")
+        ActionPlan frameScopedPlan = tryFrameScoping(step);
+        if (frameScopedPlan != null) {
+            return frameScopedPlan;
+        }
         
-        // STRATEGY 1: Try table-specific patterns first (new features)
+        // STRATEGY 2: Try table-specific patterns first (new features)
         ActionPlan tablePlan = tryTablePatterns(step);
         if (tablePlan != null) {
-            logger.success("Matched via Table Pattern: {}", tablePlan.getActionType());
+            logger.success("Matched via Table/Frame Pattern: {}", tablePlan.getActionType());
             return tablePlan;
         }
         
-        // STRATEGY 2: Fall back to legacy patterns (existing features)
+        // STRATEGY 3: Fall back to legacy patterns (existing features)
         ActionPlan legacyPlan = legacyPlanner.plan(step);
         if (legacyPlan != null && !"unknown".equals(legacyPlan.getActionType())) {
             logger.success("Matched via Legacy Pattern: {}", legacyPlan.getActionType());
             return legacyPlan;
         }
         
-        // STRATEGY 3: Try intent-based fuzzy matching
+        // STRATEGY 4: Try intent-based fuzzy matching
         ActionPlan fuzzyPlan = tryIntentClassification(step);
         if (fuzzyPlan != null) {
             logger.warning("Matched via Fuzzy Intent: {}", fuzzyPlan.getActionType());
             return fuzzyPlan;
         }
         
-        // STRATEGY 4: LLM Fallback (future - would call OpenAI API here)
+        // STRATEGY 5: LLM Fallback (future - would call OpenAI API here)
         logger.error("❌ Could not parse step: {}", step);
         return createUnknownPlan(step);
     }
     
+    /**
+     * Handles patterns like "In iframe 'frame1', Enter 'John' in 'First Name'"
+     */
+    private ActionPlan tryFrameScoping(String step) {
+        Pattern p = Pattern.compile("^(?i)(?:given|when|then|and|but)?\\s*(?:in|within|inside)\\s+(?:the\\s+)?(?:iframe|frame)\\s+[\"']?([^\"']+)[\"']?[\\s,]+(.+)", Pattern.CASE_INSENSITIVE);
+        Matcher m = p.matcher(step);
+        
+        if (m.find()) {
+            String frameName = m.group(1);
+            String remainingStep = m.group(2).trim();
+            
+            logger.info("📦 Detected Frame Scoping: '{}'", frameName);
+            
+            // Parse the remaining part as a normal step
+            ActionPlan innerPlan = parseStep(remainingStep);
+            
+            // Set the frame anchor
+            innerPlan.setFrameAnchor(frameName);
+            return innerPlan;
+        }
+        return null;
+    }
+
     /**
      * Detects if a step contains multiple actions chained together.
      * Looks for delimiters: "and", "also", "then", ",", "&"
@@ -462,7 +500,7 @@ public class SmartStepParser {
                 plan.setIsBulkAction(true);
                 plan.setBulkActionType(value);
             }
-            case "buttonName" -> plan.setElementName(value);
+            case "buttonName", "frameName" -> plan.setElementName(value);
             case "searchValue" -> plan.setValue(value);
         }
     }

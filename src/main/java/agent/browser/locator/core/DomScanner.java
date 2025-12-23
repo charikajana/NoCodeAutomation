@@ -1,5 +1,6 @@
 package agent.browser.locator.core;
 
+import com.microsoft.playwright.Frame;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import java.util.ArrayList;
@@ -9,15 +10,19 @@ import java.util.Map;
 public class DomScanner {
 
     public List<ElementCandidate> scan(Page page) {
-        return scanInternal(page, null);
+        return scanInternal(page, null, null);
     }
     
     public List<ElementCandidate> scan(Locator scope) {
-        return scanInternal(null, scope);
+        return scanInternal(null, null, scope);
+    }
+
+    public List<ElementCandidate> scan(Frame frame) {
+        return scanInternal(null, frame, null);
     }
 
     @SuppressWarnings("unchecked")
-    private List<ElementCandidate> scanInternal(Page page, Locator scope) {
+    private List<ElementCandidate> scanInternal(Page page, Frame frame, Locator scope) {
         String js = "root => {" +
                 "  const base = root || document;" +
                 "  const candidates = Array.from(base.querySelectorAll('button, a, input, textarea, select, [role=\"button\"], label, span, div, p, h1, h2, h3, h4, h5, h6'));" +
@@ -44,6 +49,8 @@ public class DomScanner {
         Object result;
         if (scope != null) {
             result = scope.evaluate(js);
+        } else if (frame != null) {
+            result = frame.evaluate("() => (" + js + ")()");
         } else {
             result = page.evaluate("() => (" + js + ")()");
         }

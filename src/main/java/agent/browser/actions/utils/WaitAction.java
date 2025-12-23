@@ -103,7 +103,7 @@ public class WaitAction implements BrowserAction {
         
         try {
             // Use the smart locator to find and wait for the element
-            Locator element = locator.waitForSmartElement(elementName, "button"); // Use generic type
+            Locator element = locator.waitForSmartElement(elementName, "button", null, plan.getFrameAnchor()); // Use generic type
             
             // Additional check to ensure it's visible
             element.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(30000));
