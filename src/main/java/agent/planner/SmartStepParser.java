@@ -130,7 +130,7 @@ public class SmartStepParser {
             
         // Dismiss confirm dialog
         addTablePattern("dismiss_alert",
-            "^(?:dismiss|cancel|click cancel|click cancel on)\\s+(?:the\\s+)?(?:alert|confirm|dialog)",
+            "^(?:dismiss|cancel|close|click cancel|click cancel on)\\s+(?:the\\s+)?(?:alert|confirm|dialog|popup alert)",
             Map.of());
             
         // Handle prompt - accept with text
@@ -152,10 +152,30 @@ public class SmartStepParser {
             "^(?:accept|confirm|click ok on)\\s+(?:the\\s+)?prompt",
             Map.of());
             
-        // Handle prompt - dismiss
         addTablePattern("prompt_alert",
             "^(?:dismiss|cancel)\\s+(?:the\\s+)?prompt",
             Map.of("elementName", "dismiss"));
+
+        // CATEGORY: MODAL DIALOGS
+        addTablePattern("verify_modal_visible",
+            "^(?:then|and)?\\s*(?:validate|verify|check|ensure)\\s+(?:that\\s+)?(?:the\\s+)?modal\\s+(?:dialog\\s+)?(?:is\\s+)?(?:visible|displayed|present)",
+            Map.of());
+            
+        addTablePattern("verify_modal_visible",
+            "^(?:then|and)?\\s*(?:validate|verify|check|ensure)\\s+(?:that\\s+)?(?:the\\s+)?modal\\s+(?:dialog\\s+)?with\\s+(?:title|header)\\s+[\"']([^\"']+)[\"']\\s+(?:is\\s+)?(?:visible|displayed|present)",
+            Map.of("value", 1));
+
+        addTablePattern("verify_modal_not_visible",
+            "^(?:then|and)?\\s*(?:validate|verify|check|ensure)\\s+(?:that\\s+)?(?:the\\s+)?modal\\s+(?:dialog\\s+)?(?:is\\s+)?not\\s+(?:visible|displayed|present)",
+            Map.of());
+
+        addTablePattern("verify_modal_not_visible",
+            "^(?:then|and)?\\s*(?:validate|verify|check|ensure)\\s+(?:that\\s+)?(?:the\\s+)?modal\\s+(?:dialog\\s+)?with\\s+(?:title|header)\\s+[\"']([^\"']+)[\"']\\s+(?:is\\s+)?not\\s+(?:visible|displayed|present)",
+            Map.of("value", 1));
+
+        addTablePattern("close_modal",
+            "^(?:when|and)?\\s*(?:close|dismiss|exit|shut|hide)\\s+(?:the\\s+)?(?:modal|dialog|dialog box|popup)",
+            Map.of());
 
 
         
@@ -286,7 +306,7 @@ public class SmartStepParser {
         
         // Define action-related keywords that indicate this is an action step
         // (not a table verification or other complex step)
-        String[] actionKeywords = {"enter", "click", "select", "type", "fill", "choose", "check", "uncheck"};
+        String[] actionKeywords = {"enter", "click", "select", "type", "fill", "choose", "check", "uncheck", "close"};
         
         boolean hasActionKeyword = false;
         String lowerStep = cleanStep.toLowerCase();
@@ -309,9 +329,9 @@ public class SmartStepParser {
         // Count potential action delimiters
         // Use regex to find patterns like: "Enter X and Enter Y" or "Click X also Click Y"
         Pattern combinedPattern = Pattern.compile(
-            "(?i)(enter|click|select|type|fill|choose|check|uncheck).*?" +  // First action
+            "(enter|click|select|type|fill|choose|check|uncheck|close).*?" +  // First action
             "\\s+(?:and|also|then|,|&)\\s+" +  // Delimiter
-            "(enter|click|select|type|fill|choose|check|uncheck)",  // Second action
+            "(enter|click|select|type|fill|choose|check|uncheck|close)",  // Second action
             Pattern.CASE_INSENSITIVE
         );
         

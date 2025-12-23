@@ -12,6 +12,7 @@ import agent.browser.actions.utils.*;
 import agent.browser.actions.window.*;
 import agent.browser.actions.alert.*;
 import agent.browser.actions.frame.*;
+import agent.browser.actions.modal.*;
 import agent.utils.LoggerUtil;
 import com.microsoft.playwright.*;
 import java.util.HashMap;
@@ -78,6 +79,11 @@ public class BrowserService {
         SwitchFrameAction frameMgmt = new SwitchFrameAction();
         actionHandlers.put("switch_to_frame", frameMgmt);
         actionHandlers.put("switch_to_main_frame", frameMgmt);
+
+        // Modal handling
+        actionHandlers.put("verify_modal_visible", new VerifyModalAction());
+        actionHandlers.put("verify_modal_not_visible", new VerifyModalAction());
+        actionHandlers.put("close_modal", new CloseModalAction());
     }
 
     public void startBrowser() {

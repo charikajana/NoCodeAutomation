@@ -57,8 +57,33 @@ public class DismissAlertAction implements BrowserAction {
                 logger.success("Dialog dismissed successfully");
                 return true;
             } else {
-                logger.warning("No confirm dialog appeared");
-                return true; // Don't fail if already handled
+                logger.warning("No browser alert appeared. Checking for HTML modal as fallback...");
+                
+                // FALLBACK: Try to close as an HTML modal
+                try {
+                    com.microsoft.playwright.Locator modal = page.locator(".modal.show, .modal-dialog, [role='dialog']").first();
+                    if (modal.count() > 0 && modal.isVisible()) {
+                        logger.info("Found HTML modal, attempting to close...");
+                        
+                        // Try typical close buttons
+                        com.microsoft.playwright.Locator closeBtn = modal.locator("button.close, [aria-label='Close'], button:has-text('×'), button:has-text('Close')").first();
+                        if (closeBtn.count() > 0 && closeBtn.isVisible()) {
+                            closeBtn.click();
+                            logger.success("HTML modal closed successfully via fallback");
+                            return true;
+                        }
+                        
+                        // Escape key fallback
+                        page.keyboard().press("Escape");
+                        logger.success("Sent Escape key to close potential modal");
+                        return true;
+                    }
+                } catch (Exception e) {
+                    logger.debug("Fallback modal check failed: {}", e.getMessage());
+                }
+                
+                logger.warning("No dialog or modal appeared to close");
+                return true; // Return true as nothing was there to block
             }
             
         } catch (Exception e) {

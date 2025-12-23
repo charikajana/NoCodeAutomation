@@ -42,6 +42,7 @@ public class StepPlanner {
         // Additional flexible patterns for various phrasings - MUST BE FIRST for priority
         // "verify 'text' this text present" or "validate 'text' text present"
         addPattern("verify", "^(?:then\\s+)?(?:validate|verify|assert|check)\\s+[\"']([^\"']+)[\"']\\s+(?:this\\s+)?(?:text|message)\\s+(?:is\\s+)?(?:present|shown|displayed|visible)", -1, 1, -1);
+        addPattern("verify", "^(?:then\\s+)?(?:validate|verify|assert|check)\\s+(?:the\\s+)?(?:text|message)\\s+[\"']([^\"']+)[\"']\\s+(?:is\\s+)?(?:present|shown|displayed|visible)", -1, 1, -1);
         addPattern("verify", "^(?:then\\s+)?(?:validate|verify|assert|check)\\s+[\"']([^\"']+)[\"']\\s+(?:message|text)?\\s*(?:should\\s+be)?\\s*(?:display|displayed|present|shown|visible)", -1, 1, -1);
         
         // NEGATIVE VERIFICATION: Flexible patterns for 'should not be display/displayed'
