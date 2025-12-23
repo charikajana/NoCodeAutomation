@@ -13,6 +13,7 @@ import agent.browser.actions.window.*;
 import agent.browser.actions.alert.*;
 import agent.browser.actions.frame.*;
 import agent.browser.actions.modal.*;
+import agent.browser.actions.list.*;
 import agent.utils.LoggerUtil;
 import com.microsoft.playwright.*;
 import java.util.HashMap;
@@ -84,6 +85,11 @@ public class BrowserService {
         actionHandlers.put("verify_modal_visible", new VerifyModalAction());
         actionHandlers.put("verify_modal_not_visible", new VerifyModalAction());
         actionHandlers.put("close_modal", new CloseModalAction());
+        
+        // Multiselect list handling
+        actionHandlers.put("multiselect_item", new MultiselectAction());
+        actionHandlers.put("verify_selected", new VerifySelectionAction());
+        actionHandlers.put("verify_not_selected", new VerifySelectionAction());
     }
 
     public void startBrowser() {

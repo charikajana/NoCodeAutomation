@@ -177,6 +177,36 @@ public class SmartStepParser {
             "^(?:when|and)?\\s*(?:close|dismiss|exit|shut|hide)\\s+(?:the\\s+)?(?:modal|dialog|dialog box|popup)",
             Map.of());
 
+        // CATEGORY: MULTISELECT LISTS (Non-dropdown selectable items)
+        // Pattern: "Select 'Item' from list"
+        addTablePattern("multiselect_item",
+            "^(?:when|and)?\\s*(?:select|choose|pick)\\s+[\"']([^\"']+)[\"']\\s+(?:from|in)\\s+(?:the\\s+)?(?:list|grid)",
+            Map.of("value", 1));
+        
+        // Pattern: "Select multiple items 'Item1;Item2;Item3'"
+        addTablePattern("multiselect_item",
+            "^(?:when|and)?\\s*(?:select|choose|pick)\\s+(?:multiple\\s+)?(?:items?|values?)\\s+[\"']([^\"']+)[\"']",
+            Map.of("value", 1));
+        
+        // Pattern: "Multiselect 'Item1' and 'Item2' and 'Item3'"
+        addTablePattern("multiselect_item",
+            "^(?:when|and)?\\s*(?:multi-?select|select)\\s+(.+)",
+            Map.of("value", 1));
+        
+        // Pattern: "Verify 'Item' is selected"
+        addTablePattern("verify_selected",
+            "^(?:then|and)?\\s*(?:verify|check|assert)\\s+(?:that\\s+)?(?:items?\\s+)?[\"']([^\"']+)[\"']\\s+(?:is|are)\\s+selected",
+            Map.of("value", 1));
+        
+        // Pattern: "Verify items 'Item1;Item2' are selected"
+        addTablePattern("verify_selected",
+            "^(?:then|and)?\\s*(?:verify|check|assert)\\s+(?:that\\s+)?(?:items?|values?)\\s+[\"']([^\"']+)[\"']\\s+(?:is|are)\\s+selected",
+            Map.of("value", 1));
+        
+        // Pattern: "Verify 'Item' is not selected"
+        addTablePattern("verify_not_selected",
+            "^(?:then|and)?\\s*(?:verify|check|assert)\\s+(?:that\\s+)?(?:items?\\s+)?[\"']([^\"']+)[\"']\\s+(?:is|are)\\s+not\\s+selected",
+            Map.of("value", 1));
 
         
         // CATEGORY 5: SORTING
