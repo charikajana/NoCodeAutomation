@@ -29,7 +29,7 @@ public class VerifyRowNotExistsAction implements BrowserAction {
             return false;
         }
         
-        logger.info("🔍 Verifying row does NOT exist where '{}' = '{}'", columnName, columnValue);
+        logger.info("Verifying row does NOT exist where '{}' = '{}'", columnName, columnValue);
         
         // Use XPath builder to check if row exists
         DynamicTableXPathBuilder builder = new DynamicTableXPathBuilder(page);
@@ -45,7 +45,7 @@ public class VerifyRowNotExistsAction implements BrowserAction {
         
         if (rowCount == 0) {
             // Row does NOT exist - SUCCESS!
-            logger.section("✅ VALIDATION SUCCESS");
+            logger.section("VALIDATION SUCCESS");
             logger.info(" Expected: Row with '{}' = '{}' should NOT exist", columnName, columnValue);
             logger.info(" Actual  : Row NOT found (deleted successfully)");
             logger.info("--------------------------------------------------");
@@ -53,7 +53,7 @@ public class VerifyRowNotExistsAction implements BrowserAction {
         } else {
             // Row still exists - FAILURE!
             String rowText = row.first().innerText().replaceAll("\n", " | ");
-            logger.section("❌ VALIDATION FAILED");
+            logger.section("VALIDATION FAILED");
             logger.error(" Expected: Row with '{}' = '{}' should NOT exist", columnName, columnValue);
             logger.error(" Actual  : Row STILL EXISTS");
             logger.error(" Row Content: {}", rowText);

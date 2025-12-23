@@ -25,7 +25,7 @@ public class SetupAcceptAlertAction implements BrowserAction {
             alertHandled = false;
             lastAlertMessage = "";
             
-            logger.info("🔔 Setting up alert handler (will auto-accept next dialog)");
+            logger.info("Setting up alert handler (will auto-accept next dialog)");
             
             // Set up persistent dialog handler
             page.onDialog(dialog -> {

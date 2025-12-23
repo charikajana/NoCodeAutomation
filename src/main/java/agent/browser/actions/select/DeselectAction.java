@@ -20,7 +20,7 @@ public class DeselectAction implements BrowserAction {
         String dropdownLabel = plan.getElementName();
         String optionToRemove = plan.getValue();
         
-        logger.info("🗑️ Deselecting option: '{}' from dropdown: '{}'", optionToRemove, dropdownLabel);
+        logger.info("Deselecting option: '{}' from dropdown: '{}'", optionToRemove, dropdownLabel);
         
         // Step 1: Find the dropdown wrapper
         Locator dropdownWrapper = locator.waitForSmartElement(dropdownLabel, "select", null, plan.getFrameAnchor());
@@ -90,7 +90,7 @@ public class DeselectAction implements BrowserAction {
             logger.debug("Wrapper ID: '{}', Class: '{}'", wrapperId, wrapperClass);
             
             // Strategy 1: React-Select multiselect uses chips/tags with remove buttons
-            // The structure is typically: <div class="*-multiValue"><div>OptionText</div><div class="*-multiValueRemove">×</div></div>
+            // The structure is typically: <div class="*-multiValue"><div>OptionText</div><div class="*-multiValueRemove">x</div></div>
             
             // Find the chip/tag containing the option text
             String multiValueSelector = String.format("div[class*='multiValue']:has-text(\"%s\")", optionText);

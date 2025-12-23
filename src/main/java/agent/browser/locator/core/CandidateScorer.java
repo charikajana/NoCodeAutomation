@@ -1,5 +1,7 @@
 package agent.browser.locator.core;
 
+import agent.utils.FuzzyMatch;
+
 public class CandidateScorer {
 
     public double score(ElementCandidate el, String targetName, String parsedType) {
@@ -27,15 +29,15 @@ public class CandidateScorer {
         if (name.equalsIgnoreCase(el.title) || cleanName.equalsIgnoreCase(lowerTitle)) score += 140;
         
         // ========== TIER 2: BIDIRECTIONAL CONTAINS (100-120 points) ==========
-        // User says "Edit Icon" → Element has title="Edit" ✅
+        // User says "Edit Icon" -> Element has title="Edit"
         if (!el.title.isEmpty() && lowerName.contains(lowerTitle)) score += 120;
         if (!el.label.isEmpty() && lowerName.contains(lowerLabel)) score += 120;
         
-        // User says "Edi" → Element has title="Edit" ✅ (reverse partial)
+        // User says "Edi" -> Element has title="Edit" (reverse partial)
         if (!el.title.isEmpty() && lowerTitle.contains(lowerName)) score += 110;
         if (!el.label.isEmpty() && lowerLabel.contains(lowerName)) score += 110;
        
-        // User says "Edi" → Element text contains search term ✅  
+        // User says "Edi" -> Element text contains search term
         if (!text.isEmpty() && lowerText.contains(lowerName)) score += 110;
         if (!text.isEmpty() && lowerText.contains(cleanName)) score += 105;
 
@@ -46,11 +48,11 @@ public class CandidateScorer {
              if (text.toLowerCase().contains(lowerName) || text.toLowerCase().contains(cleanName)) score += 40; 
              if (el.title.toLowerCase().contains(lowerName) || el.title.toLowerCase().contains(cleanName)) score += 35; // Tooltip contains
              // Using simple string contains or custom util if available. 
-             // Assuming agent.util.FuzzyMatch is available as per original code.
+             // Assuming agent.utils.FuzzyMatch is available as per original code.
              try {
-                if (agent.util.FuzzyMatch.ratio(name, text) > 85 || agent.util.FuzzyMatch.ratio(cleanName, text) > 85) score += 30; 
-                if (agent.util.FuzzyMatch.ratio(name, el.id) > 85 || agent.util.FuzzyMatch.ratio(cleanName, el.id) > 85) score += 30;
-                if (agent.util.FuzzyMatch.ratio(name, el.title) > 85 || agent.util.FuzzyMatch.ratio(cleanName, el.title) > 85) score += 30; // Fuzzy tooltip match
+                if (FuzzyMatch.ratio(name, text) > 85 || FuzzyMatch.ratio(cleanName, text) > 85) score += 30;
+                if (FuzzyMatch.ratio(name, el.id) > 85 || FuzzyMatch.ratio(cleanName, el.id) > 85) score += 30;
+                if (FuzzyMatch.ratio(name, el.title) > 85 || FuzzyMatch.ratio(cleanName, el.title) > 85) score += 30; // Fuzzy tooltip match
              } catch (Throwable t) {
                  // Fallback if FuzzyMatch is missing/fails
              }

@@ -1,4 +1,4 @@
-package agent.util;
+package agent.utils;
 
 public class FuzzyMatch {
 

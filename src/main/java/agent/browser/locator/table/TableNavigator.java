@@ -18,7 +18,7 @@ public class TableNavigator {
      * Example: findRowByColumnValue(page, "First Name", "John")
      */
     public Locator findRowByColumnValue(Page page, String columnName, String columnValue) {
-        logger.info("🎯 Finding row where '{}' = '{}'", columnName, columnValue);
+        logger.info("Finding row where '{}' = '{}'", columnName, columnValue);
         
         DynamicTableXPathBuilder builder = new DynamicTableXPathBuilder(page);
         return builder.findRow(columnName, columnValue);

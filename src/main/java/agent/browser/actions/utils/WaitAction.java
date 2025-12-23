@@ -72,7 +72,7 @@ public class WaitAction implements BrowserAction {
      */
     private boolean handlePageLoadWait(Page page) {
         try {
-            logger.info("⏳ Waiting for page to load (DOM ready)...");
+            logger.info("WAIT: Waiting for page to load (DOM ready)...");
             // Use DOMCONTENTLOADED instead of NETWORKIDLE (more reliable)
             page.waitForLoadState(com.microsoft.playwright.options.LoadState.DOMCONTENTLOADED);
             Thread.sleep(2000); // Additional wait for dynamic content
@@ -99,7 +99,7 @@ public class WaitAction implements BrowserAction {
             return false;
         }
         
-        logger.info("⏳ Waiting for '{}' to appear...", elementName);
+        logger.info("WAIT: Waiting for '{}' to appear...", elementName);
         
         try {
             // Use the smart locator to find and wait for the element
@@ -126,7 +126,7 @@ public class WaitAction implements BrowserAction {
             return false;
         }
         
-        logger.info("⏳ Waiting for '{}' to disappear...", elementName);
+        logger.info("WAIT: Waiting for '{}' to disappear...", elementName);
         
         try {
             // Try to find the element using smart locator

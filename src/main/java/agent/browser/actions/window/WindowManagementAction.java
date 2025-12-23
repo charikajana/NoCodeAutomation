@@ -28,7 +28,7 @@ public class WindowManagementAction implements BrowserAction {
         // Initialize main window on first action
         if (mainWindowHandle == null) {
             mainWindowHandle = getWindowHandle(page);
-            logger.info("📌 Main window initialized: {}", mainWindowHandle);
+            logger.info("Main window initialized: {}", mainWindowHandle);
         }
         
         switch (actionType) {
@@ -68,7 +68,7 @@ public class WindowManagementAction implements BrowserAction {
             }
             
             // Otherwise wait for new page event (up to 10 seconds)
-            logger.info("⏳ Waiting for new window to open...");
+            logger.info("Waiting for new window to open...");
             CompletableFuture<Page> newPageFuture = new CompletableFuture<>();
             
             page.context().onPage(newPageFuture::complete);
@@ -168,7 +168,7 @@ public class WindowManagementAction implements BrowserAction {
             }
             
             // Otherwise wait for new page (up to 10 seconds)
-            logger.info("⏳ Waiting for new window to open before closing...");
+            logger.info("Waiting for new window to open before closing...");
             CompletableFuture<Page> newPageFuture = new CompletableFuture<>();
             
             page.context().onPage(newPageFuture::complete);

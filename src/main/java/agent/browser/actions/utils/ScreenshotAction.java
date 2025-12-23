@@ -14,7 +14,7 @@ public class ScreenshotAction implements BrowserAction {
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
         String filename = "screenshot-" + System.currentTimeMillis() + ".png";
         page.screenshot(new Page.ScreenshotOptions().setPath(java.nio.file.Paths.get(filename)));
-        logger.info("📸 Captured screenshot: {}", filename);
+        logger.info("Captured screenshot: {}", filename);
         return true;
     }
 }

@@ -73,7 +73,7 @@ public class SmartLocator {
         if (frameAnchor != null) {
             logger.warning("Searched within iframe '{}' - verify iframe existence", frameAnchor);
         }
-        logger.info("💡 Tip: Check if the step syntax is correct and element exists on the page");
+        logger.info("Tip: Check if the step syntax is correct and element exists on the page");
         
         return null;
     }

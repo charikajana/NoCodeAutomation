@@ -72,7 +72,7 @@ public class VerifyRowAddedAction implements BrowserAction {
             
             logger.section("VALIDATION SUCCESS");
             logger.info(" Expected: Row with '{}' in '{}' column", expectedValue, columnName);
-            logger.info(" Status: ✓ Row found in table");
+            logger.info(" Status: Row found in table");
             logger.info("--------------------------------------------------");
             return true;
             

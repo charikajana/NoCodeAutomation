@@ -212,7 +212,7 @@ public class SmartStepParser {
     public ActionPlan parseStep(String step) {
         // STRATEGY 0: Check if this is a combined action step (contains multiple actions)
         if (isCombinedAction(step)) {
-            logger.info("🔗 Detected Combined Action Step");
+            logger.info("Detected Combined Action Step");
             return parseCombinedActions(step);
         }
 
@@ -244,7 +244,7 @@ public class SmartStepParser {
         }
         
         // STRATEGY 5: LLM Fallback (future - would call OpenAI API here)
-        logger.error("❌ Could not parse step: {}", step);
+        logger.error("Could not parse step: {}", step);
         return createUnknownPlan(step);
     }
     
@@ -259,7 +259,7 @@ public class SmartStepParser {
             String frameName = m.group(1);
             String remainingStep = m.group(2).trim();
             
-            logger.info("📦 Detected Frame Scoping: '{}'", frameName);
+            logger.info("Detected Frame Scoping: '{}'", frameName);
             
             // Parse the remaining part as a normal step
             ActionPlan innerPlan = parseStep(remainingStep);
@@ -348,7 +348,7 @@ public class SmartStepParser {
         // But NOT if they're inside quotes
         List<String> subActions = splitByDelimiters(cleanStep);
         
-        logger.info("📋 Split into {} sub-actions", subActions.size());
+        logger.info("Split into {} sub-actions", subActions.size());
         
         List<ActionPlan> parsedActions = new ArrayList<>();
         

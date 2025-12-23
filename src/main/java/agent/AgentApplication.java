@@ -35,7 +35,7 @@ public class AgentApplication {
             for (String step : steps) {
                 if (!shouldContinue) {
                     skipped++;
-                    logger.warn("⏭️  SKIPPED: {}", step);
+                    logger.warn("SKIPPED: {}", step);
                     continue;
                 }
                 
@@ -47,12 +47,12 @@ public class AgentApplication {
                     agent.planner.CompositeActionPlan compositePlan = (agent.planner.CompositeActionPlan) plan;
                     boolean allSubActionsSucceeded = true;
                     
-                    logger.info("  🔄 Executing {} sub-actions...", compositePlan.getSubActionCount());
+                    logger.info("  Executing {} sub-actions...", compositePlan.getSubActionCount());
                     
                     // Execute each sub-action sequentially
                     int subIndex = 1;
                     for (ActionPlan subAction : compositePlan.getSubActions()) {
-                        logger.info("    ▶️  Sub-action {}/{}: {}", 
+                        logger.info("    Sub-action {}/{}: {}", 
                             subIndex, compositePlan.getSubActionCount(), subAction.getActionType());
                         
                         boolean subSuccess = browserService.executeAction(subAction);
@@ -73,7 +73,7 @@ public class AgentApplication {
                     } else {
                         failed++;
                         shouldContinue = false;
-                        logger.error("\n❌ EXECUTION STOPPED: Composite action failed, skipping remaining steps\n");
+                        logger.error("\nEXECUTION STOPPED: Composite action failed, skipping remaining steps\n");
                     }
                 } else {
                     // Regular single action
@@ -85,7 +85,7 @@ public class AgentApplication {
                         failed++;
                         // Stop execution on first failure to prevent cascading errors
                         shouldContinue = false;
-                        logger.error("\n❌ EXECUTION STOPPED: Step failed, skipping remaining steps to prevent uncontrolled loop\n");
+                        logger.error("\nEXECUTION STOPPED: Step failed, skipping remaining steps to prevent uncontrolled loop\n");
                     }
                 }
             }

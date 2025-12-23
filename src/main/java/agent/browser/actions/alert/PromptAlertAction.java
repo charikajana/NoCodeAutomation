@@ -34,7 +34,7 @@ public class PromptAlertAction implements BrowserAction {
                     String defaultValue = dialog.defaultValue();
                     
                     logger.info("--------------------------------------------------");
-                    logger.info(" 💬 PROMPT DIALOG DETECTED");
+                    logger.info(" PROMPT DIALOG DETECTED");
                     logger.info(" Type: {}", type);
                     logger.info(" Message: {}", message);
                     logger.info(" Default Value: {}", defaultValue);

@@ -34,25 +34,25 @@ public class LoggerUtil {
     }
     
     /**
-     * Log step execution with emoji for visual clarity
+     * Log step execution
      */
     public void step(String message) {
-        logger.info("▶️  {}", message);
+        logger.info("STEP: {}", message);
     }
     
     public void step(String format, Object... args) {
-        logger.info("▶️  " + format, args);
+        logger.info("STEP: " + format, args);
     }
     
     /**
      * Log success messages
      */
     public void success(String message) {
-        logger.info("✅ {}", message);
+        logger.info("SUCCESS: {}", message);
     }
     
     public void success(String format, Object... args) {
-        logger.info("✅ " + format, args);
+        logger.info("SUCCESS: " + format, args);
     }
     
     /**
@@ -60,9 +60,9 @@ public class LoggerUtil {
      */
     public void header(String message) {
         logger.info("\n{}\n{}\n{}", 
-            "══════════════════════════════════════════════════════════",
+            "==================================================",
             message,
-            "══════════════════════════════════════════════════════════");
+            "==================================================");
     }
     
     /**
@@ -88,11 +88,11 @@ public class LoggerUtil {
      * Log technical/analysis details
      */
     public void analysis(String message) {
-        logger.debug("🔍 {}", message);
+        logger.debug("ANALYSIS: {}", message);
     }
     
     public void analysis(String format, Object... args) {
-        logger.debug("🔍 " + format, args);
+        logger.debug("ANALYSIS: " + format, args);
     }
     
     // ========== WARN LEVEL ==========
@@ -106,14 +106,14 @@ public class LoggerUtil {
     }
     
     /**
-     * Log warnings with emoji
+     * Log warnings
      */
     public void warning(String message) {
-        logger.warn("⚠️  {}", message);
+        logger.warn("WARNING: {}", message);
     }
     
     public void warning(String format, Object... args) {
-        logger.warn("⚠️  " + format, args);
+        logger.warn("WARNING: " + format, args);
     }
     
     // ========== ERROR LEVEL ==========
@@ -134,11 +134,11 @@ public class LoggerUtil {
      * Log failures
      */
     public void failure(String message) {
-        logger.error("❌ {}", message);
+        logger.error("FAILURE: {}", message);
     }
     
     public void failure(String format, Object... args) {
-        logger.error("❌ " + format, args);
+        logger.error("FAILURE: " + format, args);
     }
     
     /**
@@ -156,7 +156,7 @@ public class LoggerUtil {
      * Log action plan execution
      */
     public void actionPlan(String actionType, String target) {
-        logger.info("🎯 Matched via Pattern: {}", actionType);
+        logger.info("MATCH: Pattern: {}", actionType);
         logger.debug("   Target: {}", target);
     }
     
@@ -164,14 +164,14 @@ public class LoggerUtil {
      * Log browser actions
      */
     public void browserAction(String action, String target) {
-        logger.info("🌐 {} → {}", action, target);
+        logger.info("{} -> {}", action, target);
     }
     
     /**
      * Log alert/dialog detection
      */
     public void alert(String type, String message) {
-        logger.info("🔔 DIALOG DETECTED");
+        logger.info("ALERT DETECTED");
         logger.info("   Type: {}", type);
         logger.info("   Message: {}", message);
     }
@@ -180,7 +180,7 @@ public class LoggerUtil {
      * Log wait operations
      */
     public void waiting(int seconds) {
-        logger.info("⏳  Waiting for {} second(s)...", seconds);
+        logger.info("WAIT: Waiting for {} second(s)...", seconds);
     }
     
     /**
@@ -189,10 +189,10 @@ public class LoggerUtil {
     public void summary(String title, int total, int passed, int failed, int skipped) {
         section(title);
         logger.info("  Total   : {}", total);
-        logger.info("  Passed  : {} ✅", passed);
-        logger.info("  Failed  : {} ❌", failed);
+        logger.info("  Passed  : {}", passed);
+        logger.info("  Failed  : {}", failed);
         if (skipped > 0) {
-            logger.info("  Skipped : {} ⏭️", skipped);
+            logger.info("  Skipped : {}", skipped);
         }
         logger.info("--------------------------------------------------");
     }

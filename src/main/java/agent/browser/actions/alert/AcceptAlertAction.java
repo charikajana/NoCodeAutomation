@@ -66,20 +66,20 @@ public class AcceptAlertAction implements BrowserAction {
                 
                 // Verify expected message if provided
                 if (expectedMessage != null && !expectedMessage.isEmpty()) {
-                    if (actualMessage.contains(expectedMessage)) {
-                        logger.section("✅ ALERT MESSAGE VERIFIED");
-                        logger.info(" Expected: {}", expectedMessage);
-                        logger.info(" Actual: {}", actualMessage);
-                        logger.info(" Match: SUCCESS");
-                        logger.info("--------------------------------------------------");
-                        return true;
-                    } else {
-                        logger.section("❌ ALERT MESSAGE MISMATCH");
-                        logger.error(" Expected: {}", expectedMessage);
-                        logger.error(" Actual: {}", actualMessage);
-                        logger.info("--------------------------------------------------");
-                        return false;
-                    }
+                if (actualMessage.contains(expectedMessage)) {
+                    logger.section("ALERT MESSAGE VERIFIED");
+                    logger.info(" Expected: {}", expectedMessage);
+                    logger.info(" Actual: {}", actualMessage);
+                    logger.info(" Match: SUCCESS");
+                    logger.info("--------------------------------------------------");
+                    return true;
+                } else {
+                    logger.section("ALERT MESSAGE MISMATCH");
+                    logger.error(" Expected: {}", expectedMessage);
+                    logger.error(" Actual: {}", actualMessage);
+                    logger.info("--------------------------------------------------");
+                    return false;
+                }
                 } else {
                     // No verification needed, just accept
                     logger.success("Alert accepted successfully");

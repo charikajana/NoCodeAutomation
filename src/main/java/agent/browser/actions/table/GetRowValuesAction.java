@@ -34,7 +34,7 @@ public class GetRowValuesAction implements BrowserAction {
             return false;
         }
         
-        logger.info("🔍 Extracting all column values from row where '{}' = '{}'", conditionColumn, conditionValue);
+        logger.info("Extracting all column values from row where '{}' = '{}'", conditionColumn, conditionValue);
         
         try {
             // Detect table type and configuration
@@ -59,7 +59,7 @@ public class GetRowValuesAction implements BrowserAction {
                 return false;
             }
             
-            logger.info("📊 Found {} columns", columnCount);
+            logger.info("Found {} columns", columnCount);
             
             // Build column name to index mapping
             Map<String, Integer> columnIndexMap = new HashMap<>();
@@ -83,7 +83,7 @@ public class GetRowValuesAction implements BrowserAction {
             // Find all table rows based on table type
             int rowCount = rows.count();
             
-            logger.info("📊 Searching through {} rows...", rowCount);
+            logger.info("Searching through {} rows...", rowCount);
             
             // Search for the row matching the condition
             for (int rowIndex = 0; rowIndex < rowCount; rowIndex++) {
@@ -114,9 +114,9 @@ public class GetRowValuesAction implements BrowserAction {
                     }
                     
                     // Display the extracted data
-                    logger.info("\n┌─────────────────────────────────────────────");
-                    logger.info("│ 📋 Extracted Row Data:");
-                    logger.info("├─────────────────────────────────────────────");
+                    logger.info("\n---------------------------------------------");
+                    logger.info("| Extracted Row Data:");
+                    logger.info("---------------------------------------------");
                     
                     // Get original column names for display
                     for (int i = 0; i < columnCount; i++) {
@@ -124,11 +124,11 @@ public class GetRowValuesAction implements BrowserAction {
                         String value = rowData.get(originalColumnName.toLowerCase());
                         
                         if (!originalColumnName.isEmpty() && value != null) {
-                            logger.info(String.format("│ %-20s : %s", originalColumnName, value));
+                            logger.info(String.format("| %-20s : %s", originalColumnName, value));
                         }
                     }
                     
-                    logger.info("└─────────────────────────────────────────────\n");
+                    logger.info("---------------------------------------------\n");
                     
                     // Store data in the plan for potential later use
                     enhancedPlan.setExtractedData(rowData);

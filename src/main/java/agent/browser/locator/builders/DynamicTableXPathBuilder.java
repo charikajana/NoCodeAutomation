@@ -26,7 +26,7 @@ public class DynamicTableXPathBuilder {
      * Automatically detects the table structure on the page
      */
     private void detectTableStructure() {
-        logger.info("🔍 Detecting table structure...");
+        logger.info("Detecting table structure...");
         
         // Try different table structures - MOST SPECIFIC FIRST
         // React Table / ARIA Grid with gridcell (DemoQA uses role='row' and role='gridcell')

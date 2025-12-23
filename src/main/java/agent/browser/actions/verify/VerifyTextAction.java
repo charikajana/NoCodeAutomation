@@ -135,7 +135,7 @@ public class VerifyTextAction implements BrowserAction {
             try { visible = foundElement.isVisible(); } catch (Exception e) {}
 
             if (visible || "VALUE/XPATH".equals(matchType) || "option".equalsIgnoreCase((String)foundElement.evaluate("el => el.tagName"))) {
-                logger.section("✅ VALIDATION SUCCESS");
+                logger.section("VALIDATION SUCCESS");
                 logger.info(" Expected: {}", textToVerify);
                 logger.info(" Found in Element: {}", foundText);
                 logger.info(" Match Strategy: {}", matchType + (visible ? "" : " (Hidden/Value)"));

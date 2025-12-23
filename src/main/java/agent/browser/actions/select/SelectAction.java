@@ -33,7 +33,7 @@ public class SelectAction implements BrowserAction {
             }
         }
 
-        logger.info("🔽 Finding dropdown: '{}'", dropdownLabel);
+        logger.info("Finding dropdown: '{}'", dropdownLabel);
         
         // Step 1: Find the dropdown wrapper using smart locator
         Locator dropdownWrapper = locator.waitForSmartElement(dropdownLabel, "select", scope, plan.getFrameAnchor());
@@ -49,7 +49,7 @@ public class SelectAction implements BrowserAction {
         // Step 3: Check if we have multiple values to select (semicolon-separated)
         if (optionText != null && optionText.contains(";")) {
             String[] values = optionText.split(";");
-            logger.info("  📋 Multi-value selection detected: {} options", values.length);
+            logger.info("  Multi-value selection detected: {} options", values.length);
             
             // SMART BEHAVIOR: Check if current selections match desired selections
             if (!"select".equals(tagName)) {
@@ -68,7 +68,7 @@ public class SelectAction implements BrowserAction {
                 
                 // Clear existing selections if they don't match
                 if (!currentSelections.isEmpty()) {
-                    logger.info("  🗑️ Clearing {} existing selection(s) before selecting new ones", currentSelections.size());
+                    logger.info("  Clearing {} existing selection(s) before selecting new ones", currentSelections.size());
                     for (String existing : currentSelections) {
                         clearSingleSelection(dropdownWrapper, existing);
                     }
@@ -79,7 +79,7 @@ public class SelectAction implements BrowserAction {
             
             for (int i = 0; i < values.length; i++) {
                 String value = values[i].trim();
-                logger.info("  🎯 Selecting option {} of {}: '{}'", (i + 1), values.length, value);
+                logger.info("  Selecting option {} of {}: '{}'", (i + 1), values.length, value);
                 
                 boolean success;
                 if ("select".equals(tagName)) {

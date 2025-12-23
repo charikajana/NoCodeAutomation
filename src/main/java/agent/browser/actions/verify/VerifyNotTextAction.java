@@ -44,13 +44,13 @@ public class VerifyNotTextAction implements BrowserAction {
                 new com.microsoft.playwright.assertions.LocatorAssertions.IsHiddenOptions().setTimeout(5000)
             );
 
-            logger.section("✅ VALIDATION SUCCESS (NEGATIVE)");
+            logger.section("VALIDATION SUCCESS (NEGATIVE)");
             logger.info(" Expected NOT Visible: {}", textToNotSee);
-            logger.info(" Actual UI: Element is hidden/absent ✓");
+            logger.info(" Actual UI: Element is hidden/absent");
             logger.info("--------------------------------------------------");
             return true;
         } catch (Error e) {
-            logger.section("❌ VALIDATION FAILED (NEGATIVE)");
+            logger.section("VALIDATION FAILED (NEGATIVE)");
             logger.error(" ERROR: Text '{}' is VISIBLE when it should NOT be!", textToNotSee);
             logger.info("--------------------------------------------------");
             return false;
