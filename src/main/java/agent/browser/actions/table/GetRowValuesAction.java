@@ -1,10 +1,10 @@
 package agent.browser.actions.table;
 
 import agent.browser.actions.BrowserAction;
-
 import agent.browser.SmartLocator;
 import agent.planner.ActionPlan;
 import agent.planner.EnhancedActionPlan;
+import agent.utils.LoggerUtil;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Locator;
 
@@ -17,10 +17,12 @@ import java.util.Map;
  */
 public class GetRowValuesAction implements BrowserAction {
     
+    private static final LoggerUtil logger = LoggerUtil.getLogger(GetRowValuesAction.class);
+    
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
         if (!(plan instanceof EnhancedActionPlan enhancedPlan)) {
-            System.err.println("❌ GetRowValuesAction requires EnhancedActionPlan");
+            logger.failure("GetRowValuesAction requires EnhancedActionPlan");
             return false;
         }
         
@@ -28,23 +30,23 @@ public class GetRowValuesAction implements BrowserAction {
         String conditionValue = enhancedPlan.getRowConditionValue();
         
         if (conditionColumn == null || conditionValue == null) {
-            System.err.println("❌ Missing condition column or value for row extraction");
+            logger.failure("Missing condition column or value for row extraction");
             return false;
         }
         
-        System.out.println("🔍 Extracting all column values from row where '" + conditionColumn + "' = '" + conditionValue + "'...");
+        logger.info("🔍 Extracting all column values from row where '{}' = '{}'", conditionColumn, conditionValue);
         
         try {
             // Detect table type and configuration
             TableConfig tableConfig = detectTableType(page);
             
             if (tableConfig == null) {
-                System.err.println("❌ No supported table found on the page");
-                System.err.println("   Tried: HTML, React Table, AG Grid, Material-UI, Ant Design, Tabulator, Angular Material");
+                logger.failure("No supported table found on the page");
+                logger.error("   Tried: HTML, React Table, AG Grid, Material-UI, Ant Design, Tabulator, Angular Material");
                 return false;
             }
             
-            System.out.println("✅ Detected: " + tableConfig.type);
+            logger.success("Detected: {}", tableConfig.type);
             
             Locator table = tableConfig.table;
             Locator headerCells = tableConfig.headerCells;
@@ -53,11 +55,11 @@ public class GetRowValuesAction implements BrowserAction {
             int columnCount = headerCells.count();
             
             if (columnCount == 0) {
-                System.err.println("❌ No table headers found");
+                logger.failure("No table headers found");
                 return false;
             }
             
-            System.out.println("📊 Found " + columnCount + " columns");
+            logger.info("📊 Found {} columns", columnCount);
             
             // Build column name to index mapping
             Map<String, Integer> columnIndexMap = new HashMap<>();
@@ -66,22 +68,22 @@ public class GetRowValuesAction implements BrowserAction {
                 // Skip empty headers (common in React Tables for action columns)
                 if (!headerText.isEmpty()) {
                     columnIndexMap.put(headerText.toLowerCase(), i);
-                    System.out.println("   Column " + i + ": " + headerText);
+                    logger.debug("   Column {}: {}", i, headerText);
                 }
             }
             
             // Find the index of the condition column
             Integer conditionColumnIndex = columnIndexMap.get(conditionColumn.toLowerCase());
             if (conditionColumnIndex == null) {
-                System.err.println("❌ Column '" + conditionColumn + "' not found in table headers");
-                System.err.println("   Available columns: " + columnIndexMap.keySet());
+                logger.failure("Column '{}' not found in table headers", conditionColumn);
+                logger.error("   Available columns: {}", columnIndexMap.keySet());
                 return false;
             }
             
             // Find all table rows based on table type
             int rowCount = rows.count();
             
-            System.out.println("📊 Searching through " + rowCount + " rows...");
+            logger.info("📊 Searching through {} rows...", rowCount);
             
             // Search for the row matching the condition
             for (int rowIndex = 0; rowIndex < rowCount; rowIndex++) {
@@ -96,7 +98,7 @@ public class GetRowValuesAction implements BrowserAction {
                 
                 // Check if this row matches the condition
                 if (cellValue.equalsIgnoreCase(conditionValue) || cellValue.contains(conditionValue)) {
-                    System.out.println("✅ Found matching row at index " + rowIndex);
+                    logger.success("Found matching row at index {}", rowIndex);
                     
                     // Extract all column values from this row
                     Map<String, String> rowData = new HashMap<>();
@@ -112,9 +114,9 @@ public class GetRowValuesAction implements BrowserAction {
                     }
                     
                     // Display the extracted data
-                    System.out.println("\n┌─────────────────────────────────────────────");
-                    System.out.println("│ 📋 Extracted Row Data:");
-                    System.out.println("├─────────────────────────────────────────────");
+                    logger.info("\n┌─────────────────────────────────────────────");
+                    logger.info("│ 📋 Extracted Row Data:");
+                    logger.info("├─────────────────────────────────────────────");
                     
                     // Get original column names for display
                     for (int i = 0; i < columnCount; i++) {
@@ -122,11 +124,11 @@ public class GetRowValuesAction implements BrowserAction {
                         String value = rowData.get(originalColumnName.toLowerCase());
                         
                         if (!originalColumnName.isEmpty() && value != null) {
-                            System.out.println(String.format("│ %-20s : %s", originalColumnName, value));
+                            logger.info(String.format("│ %-20s : %s", originalColumnName, value));
                         }
                     }
                     
-                    System.out.println("└─────────────────────────────────────────────\n");
+                    logger.info("└─────────────────────────────────────────────\n");
                     
                     // Store data in the plan for potential later use
                     enhancedPlan.setExtractedData(rowData);
@@ -135,12 +137,11 @@ public class GetRowValuesAction implements BrowserAction {
                 }
             }
             
-            System.err.println("❌ No row found where '" + conditionColumn + "' = '" + conditionValue + "'");
+            logger.failure("No row found where '{}' = '{}'", conditionColumn, conditionValue);
             return false;
             
         } catch (Exception e) {
-            System.err.println("❌ Failed to extract row values: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Failed to extract row values: {}", e.getMessage(), e);
             return false;
         }
     }

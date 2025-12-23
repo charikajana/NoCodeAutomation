@@ -3,6 +3,7 @@ package agent.browser.actions.alert;
 import agent.browser.actions.BrowserAction;
 import agent.browser.SmartLocator;
 import agent.planner.ActionPlan;
+import agent.utils.LoggerUtil;
 import com.microsoft.playwright.Page;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -20,6 +21,8 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class AcceptAlertAction implements BrowserAction {
     
+    private static final LoggerUtil logger = LoggerUtil.getLogger(AcceptAlertAction.class);
+    
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
         try {
@@ -35,24 +38,19 @@ public class AcceptAlertAction implements BrowserAction {
                     
                     dialogMessage.set(message);
                     
-                    System.out.println("--------------------------------------------------");
-                    System.out.println(" 🔔 ALERT DETECTED");
-                    System.out.println(" Type: " + type);
-                    System.out.println(" Message: " + message);
-                    
+                    logger.alert(type, message);
                     if (expectedMessage != null && !expectedMessage.isEmpty()) {
-                        System.out.println(" Expected: " + expectedMessage);
+                        logger.info(" Expected: {}", expectedMessage);
                     }
-                    
-                    System.out.println(" Action: ACCEPTING");
-                    System.out.println("--------------------------------------------------");
+                    logger.info(" Action: ACCEPTING");
+                    logger.info("--------------------------------------------------");
                     
                     // Accept the dialog
                     dialog.accept();
                     dialogHandled.set(true);
                     
                 } catch (Exception e) {
-                    System.err.println("Error handling dialog: " + e.getMessage());
+                    logger.error("Error handling dialog: {}", e.getMessage());
                 }
             });
             
@@ -69,34 +67,31 @@ public class AcceptAlertAction implements BrowserAction {
                 // Verify expected message if provided
                 if (expectedMessage != null && !expectedMessage.isEmpty()) {
                     if (actualMessage.contains(expectedMessage)) {
-                        System.out.println("--------------------------------------------------");
-                        System.out.println(" ✅ ALERT MESSAGE VERIFIED");
-                        System.out.println(" Expected: " + expectedMessage);
-                        System.out.println(" Actual: " + actualMessage);
-                        System.out.println(" Match: SUCCESS");
-                        System.out.println("--------------------------------------------------");
+                        logger.section("✅ ALERT MESSAGE VERIFIED");
+                        logger.info(" Expected: {}", expectedMessage);
+                        logger.info(" Actual: {}", actualMessage);
+                        logger.info(" Match: SUCCESS");
+                        logger.info("--------------------------------------------------");
                         return true;
                     } else {
-                        System.err.println("--------------------------------------------------");
-                        System.err.println(" ❌ ALERT MESSAGE MISMATCH");
-                        System.err.println(" Expected: " + expectedMessage);
-                        System.err.println(" Actual: " + actualMessage);
-                        System.err.println("--------------------------------------------------");
+                        logger.section("❌ ALERT MESSAGE MISMATCH");
+                        logger.error(" Expected: {}", expectedMessage);
+                        logger.error(" Actual: {}", actualMessage);
+                        logger.info("--------------------------------------------------");
                         return false;
                     }
                 } else {
                     // No verification needed, just accept
-                    System.out.println("✅ Alert accepted successfully");
+                    logger.success("Alert accepted successfully");
                     return true;
                 }
             } else {
-                System.err.println("❌ No alert appeared or already handled");
+                logger.warning("No alert appeared or already handled");
                 return true; // Don't fail if alert was already handled by auto-handler
             }
             
         } catch (Exception e) {
-            System.err.println("Error in AcceptAlertAction: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error in AcceptAlertAction: {}", e.getMessage(), e);
             return false;
         }
     }

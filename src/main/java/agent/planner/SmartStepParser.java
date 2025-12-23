@@ -1,5 +1,6 @@
 package agent.planner;
 
+import agent.utils.LoggerUtil;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -11,6 +12,8 @@ import java.util.regex.Pattern;
  * 3. Optional LLM fallback (future)
  */
 public class SmartStepParser {
+    
+    private static final LoggerUtil logger = LoggerUtil.getLogger(SmartStepParser.class);
     
     private final StepPlanner legacyPlanner;
     private final Map<String, List<TableStepPattern>> tablePatterns;
@@ -200,33 +203,33 @@ public class SmartStepParser {
     public ActionPlan parseStep(String step) {
         // STRATEGY 0: Check if this is a combined action step (contains multiple actions)
         if (isCombinedAction(step)) {
-            System.out.println("🔗 Detected Combined Action Step");
+            logger.info("🔗 Detected Combined Action Step");
             return parseCombinedActions(step);
         }
         
         // STRATEGY 1: Try table-specific patterns first (new features)
         ActionPlan tablePlan = tryTablePatterns(step);
         if (tablePlan != null) {
-            System.out.println("✅ Matched via Table Pattern: " + tablePlan.getActionType());
+            logger.success("Matched via Table Pattern: {}", tablePlan.getActionType());
             return tablePlan;
         }
         
         // STRATEGY 2: Fall back to legacy patterns (existing features)
         ActionPlan legacyPlan = legacyPlanner.plan(step);
         if (legacyPlan != null && !"unknown".equals(legacyPlan.getActionType())) {
-            System.out.println("✅ Matched via Legacy Pattern: " + legacyPlan.getActionType());
+            logger.success("Matched via Legacy Pattern: {}", legacyPlan.getActionType());
             return legacyPlan;
         }
         
         // STRATEGY 3: Try intent-based fuzzy matching
         ActionPlan fuzzyPlan = tryIntentClassification(step);
         if (fuzzyPlan != null) {
-            System.out.println("⚠️ Matched via Fuzzy Intent: " + fuzzyPlan.getActionType());
+            logger.warning("Matched via Fuzzy Intent: {}", fuzzyPlan.getActionType());
             return fuzzyPlan;
         }
         
         // STRATEGY 4: LLM Fallback (future - would call OpenAI API here)
-        System.err.println("❌ Could not parse step: " + step);
+        logger.error("❌ Could not parse step: {}", step);
         return createUnknownPlan(step);
     }
     
@@ -278,7 +281,7 @@ public class SmartStepParser {
         boolean isCombined = matcher.find();
         
         if (isCombined) {
-            System.out.println("  ℹ️  Combined action detected with delimiters: and/also/then/,/&");
+            logger.debug("Combined action detected with delimiters: and/also/then/,/&");
         }
         
         return isCombined;
@@ -307,7 +310,7 @@ public class SmartStepParser {
         // But NOT if they're inside quotes
         List<String> subActions = splitByDelimiters(cleanStep);
         
-        System.out.println("  📋 Split into " + subActions.size() + " sub-actions:");
+        logger.info("📋 Split into {} sub-actions", subActions.size());
         
         List<ActionPlan> parsedActions = new ArrayList<>();
         
@@ -319,7 +322,7 @@ public class SmartStepParser {
                 ? gherkinKeyword + " " + subAction 
                 : "And " + subAction;
             
-            System.out.println("    " + (i + 1) + ". " + subAction);
+            logger.debug("  {}. {}", (i + 1), subAction);
             
             // Recursively parse each sub-action (this will hit the other strategies)
             // Temporarily disable combined action detection to avoid infinite recursion
@@ -328,7 +331,7 @@ public class SmartStepParser {
             if (subPlan != null && !"unknown".equals(subPlan.getActionType())) {
                 parsedActions.add(subPlan);
             } else {
-                System.err.println("      ⚠️ Failed to parse sub-action: " + subAction);
+                logger.warning("Failed to parse sub-action: {}", subAction);
                 // Still add it, but mark as unknown
                 parsedActions.add(createUnknownPlan(fullSubAction));
             }
@@ -336,7 +339,7 @@ public class SmartStepParser {
         
         // Create a composite action plan
         CompositeActionPlan compositePlan = new CompositeActionPlan(step, parsedActions);
-        System.out.println("  ✅ Created composite plan with " + parsedActions.size() + " actions");
+        logger.success("Created composite plan with {} actions", parsedActions.size());
         
         return compositePlan;
     }
@@ -433,7 +436,7 @@ public class SmartStepParser {
         if (("click_in_row".equals(actionType) || "click_specific_in_row".equals(actionType)) 
             && plan.getRowConditionValue() != null) {
             plan.setRowAnchor(plan.getRowConditionValue());
-            System.out.println("  > Setting rowAnchor: " + plan.getRowConditionValue());
+            logger.debug("Setting rowAnchor: {}", plan.getRowConditionValue());
         }
         
         return plan;
@@ -497,7 +500,7 @@ public class SmartStepParser {
     private ActionPlan createIntent(String actionType, String step, String reason) {
         ActionPlan plan = new ActionPlan(actionType, step);
         plan.setLocatorStrategy("intent-based");
-        System.out.println("  Reason: " + reason);
+        logger.debug("Reason: {}", reason);
         return plan;
     }
     

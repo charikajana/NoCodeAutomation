@@ -1,23 +1,25 @@
 package agent.browser.actions.table;
 
 import agent.browser.actions.BrowserAction;
-
 import agent.browser.SmartLocator;
 import agent.planner.ActionPlan;
 import agent.planner.EnhancedActionPlan;
+import agent.utils.LoggerUtil;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
-import com.microsoft.playwright.options.AriaRole;
 
 /**
  * Action handler for verifying that a new row was added to a table with specific values.
  * Handles steps like: "Then Verify New Row is added with 'value' in 'column' column"
  */
 public class VerifyRowAddedAction implements BrowserAction {
+    
+    private static final LoggerUtil logger = LoggerUtil.getLogger(VerifyRowAddedAction.class);
+    
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
         if (!(plan instanceof EnhancedActionPlan)) {
-            System.err.println("FAILURE: VerifyRowAddedAction requires EnhancedActionPlan");
+            logger.failure("VerifyRowAddedAction requires EnhancedActionPlan");
             return false;
         }
         
@@ -26,11 +28,11 @@ public class VerifyRowAddedAction implements BrowserAction {
         String expectedValue = enhancedPlan.getValue();
         
         if (columnName == null || expectedValue == null) {
-            System.err.println("FAILURE: Missing columnName or value for row verification");
+            logger.failure("Missing columnName or value for row verification");
             return false;
         }
         
-        System.out.println("Verifying row exists with '" + expectedValue + "' in '" + columnName + "' column");
+        logger.info("Verifying row exists with '{}' in '{}' column", expectedValue, columnName);
         
         try {
             // Strategy 1: Try to find table rows
@@ -43,7 +45,7 @@ public class VerifyRowAddedAction implements BrowserAction {
                 rowCount = tableRows.count();
             }
             
-            System.out.println("Found " + rowCount + " rows in table");
+            logger.debug("Found {} rows in table", rowCount);
             
             // Search for the value in the appropriate column
             boolean found = false;
@@ -53,34 +55,31 @@ public class VerifyRowAddedAction implements BrowserAction {
                 
                 // Check if the row contains the expected value
                 if (rowText.contains(expectedValue.toLowerCase())) {
-                    System.out.println("✓ Found row containing '" + expectedValue + "'");
-                    System.out.println("  Row text: " + row.innerText().replaceAll("\\n", " | "));
+                    logger.success("Found row containing '{}'", expectedValue);
+                    logger.debug("  Row text: {}", row.innerText().replaceAll("\n", " | "));
                     found = true;
                     break;
                 }
             }
             
             if (!found) {
-                System.err.println("--------------------------------------------------");
-                System.err.println(" VALIDATION FAILED");
-                System.err.println(" Expected: Row with '" + expectedValue + "' in '" + columnName + "' column");
-                System.err.println(" Actual: No such row found in table");
-                System.err.println("--------------------------------------------------");
+                logger.section("VALIDATION FAILED");
+                logger.error(" Expected: Row with '{}' in '{}' column", expectedValue, columnName);
+                logger.error(" Actual: No such row found in table");
+                logger.info("--------------------------------------------------");
                 return false;
             }
             
-            System.out.println("--------------------------------------------------");
-            System.out.println(" VALIDATION SUCCESS");
-            System.out.println(" Expected: Row with '" + expectedValue + "' in '" + columnName + "' column");
-            System.out.println(" Status: ✓ Row found in table");
-            System.out.println("--------------------------------------------------");
+            logger.section("VALIDATION SUCCESS");
+            logger.info(" Expected: Row with '{}' in '{}' column", expectedValue, columnName);
+            logger.info(" Status: ✓ Row found in table");
+            logger.info("--------------------------------------------------");
             return true;
             
         } catch (Exception e) {
-            System.err.println("--------------------------------------------------");
-            System.err.println(" VALIDATION FAILED");
-            System.err.println(" Error: " + e.getMessage());
-            System.err.println("--------------------------------------------------");
+            logger.section("VALIDATION FAILED");
+            logger.error(" Error: {}", e.getMessage());
+            logger.info("--------------------------------------------------");
             return false;
         }
     }

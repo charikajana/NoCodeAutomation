@@ -1,13 +1,16 @@
 package agent.browser.actions.input;
 
 import agent.browser.actions.BrowserAction;
-
 import agent.browser.SmartLocator;
 import agent.planner.ActionPlan;
+import agent.utils.LoggerUtil;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 
 public class CheckAction implements BrowserAction {
+    
+    private static final LoggerUtil logger = LoggerUtil.getLogger(CheckAction.class);
+    
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
         String targetName = plan.getElementName();
@@ -18,10 +21,10 @@ public class CheckAction implements BrowserAction {
             } catch (Exception e) {
                  checkbox.click();
             }
-            System.out.println("Checked: " + targetName);
+            logger.browserAction("Check", targetName);
             return true;
         } else {
-            System.err.println("FAILURE: Checkbox not found: " + targetName);
+            logger.failure("Checkbox not found: {}", targetName);
             return false;
         }
     }

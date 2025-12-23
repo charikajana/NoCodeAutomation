@@ -1,13 +1,16 @@
 package agent.browser.actions.verify;
 
 import agent.browser.actions.BrowserAction;
-
 import agent.browser.SmartLocator;
 import agent.planner.ActionPlan;
+import agent.utils.LoggerUtil;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 
 public class VerifyEnabledAction implements BrowserAction {
+    
+    private static final LoggerUtil logger = LoggerUtil.getLogger(VerifyEnabledAction.class);
+    
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
         String targetName = plan.getElementName();
@@ -24,20 +27,18 @@ public class VerifyEnabledAction implements BrowserAction {
             }
 
             if (isEnabled) {
-                System.out.println("--------------------------------------------------");
-                System.out.println(" VALIDATION SUCCESS");
-                System.out.println(" Element '" + targetName + "' matches expected state: ENABLED");
-                System.out.println("--------------------------------------------------");
+                logger.section("VALIDATION SUCCESS");
+                logger.info(" Element '{}' matches expected state: ENABLED", targetName);
+                logger.info("--------------------------------------------------");
                 return true;
             } else {
-                System.err.println("--------------------------------------------------");
-                System.err.println(" VALIDATION FAILED");
-                System.err.println(" Element '" + targetName + "' is DISABLED");
-                System.err.println("--------------------------------------------------");
+                logger.section("VALIDATION FAILED");
+                logger.error(" Element '{}' is DISABLED", targetName);
+                logger.info("--------------------------------------------------");
                 return false;
             }
         } else {
-             System.err.println("FAILURE: Element not found for enablement check: " + targetName);
+             logger.failure("Element not found for enablement check: {}", targetName);
              return false;
         }
     }

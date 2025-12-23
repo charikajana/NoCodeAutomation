@@ -3,6 +3,7 @@ package agent.browser.actions.alert;
 import agent.browser.actions.BrowserAction;
 import agent.browser.SmartLocator;
 import agent.planner.ActionPlan;
+import agent.utils.LoggerUtil;
 import com.microsoft.playwright.Page;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -15,6 +16,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * - prompt() - Dismiss without entering text
  */
 public class PromptAlertAction implements BrowserAction {
+    
+    private static final LoggerUtil logger = LoggerUtil.getLogger(PromptAlertAction.class);
     
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
@@ -30,25 +33,25 @@ public class PromptAlertAction implements BrowserAction {
                     String type = dialog.type();
                     String defaultValue = dialog.defaultValue();
                     
-                    System.out.println("--------------------------------------------------");
-                    System.out.println(" 💬 PROMPT DIALOG DETECTED");
-                    System.out.println(" Type: " + type);
-                    System.out.println(" Message: " + message);
-                    System.out.println(" Default Value: " + defaultValue);
+                    logger.info("--------------------------------------------------");
+                    logger.info(" 💬 PROMPT DIALOG DETECTED");
+                    logger.info(" Type: {}", type);
+                    logger.info(" Message: {}", message);
+                    logger.info(" Default Value: {}", defaultValue);
                     
                     if (shouldDismiss) {
-                        System.out.println(" Action: DISMISSING");
+                        logger.info(" Action: DISMISSING");
                         dialog.dismiss();
                     } else {
-                        System.out.println(" Action: ENTERING TEXT '" + promptText + "'");
+                        logger.info(" Action: ENTERING TEXT '{}'", promptText);
                         dialog.accept(promptText != null ? promptText : "");
                     }
                     
-                    System.out.println("--------------------------------------------------");
+                    logger.info("--------------------------------------------------");
                     dialogHandled.set(true);
                     
                 } catch (Exception e) {
-                    System.err.println("Error handling prompt: " + e.getMessage());
+                    logger.error("Error handling prompt: {}", e.getMessage());
                 }
             });
             
@@ -61,19 +64,18 @@ public class PromptAlertAction implements BrowserAction {
             
             if (dialogHandled.get()) {
                 if (shouldDismiss) {
-                    System.out.println("✅ Prompt dismissed successfully");
+                    logger.success("Prompt dismissed successfully");
                 } else {
-                    System.out.println("✅ Prompt accepted with text: " + promptText);
+                    logger.success("Prompt accepted with text: {}", promptText);
                 }
                 return true;
             } else {
-                System.err.println("❌ No prompt dialog appeared");
+                logger.warning("No prompt dialog appeared");
                 return true; // Don't fail if already handled
             }
             
         } catch (Exception e) {
-            System.err.println("Error in PromptAlertAction: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error in PromptAlertAction: {}", e.getMessage(), e);
             return false;
         }
     }

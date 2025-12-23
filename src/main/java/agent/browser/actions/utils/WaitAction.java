@@ -1,14 +1,17 @@
 package agent.browser.actions.utils;
 
 import agent.browser.actions.BrowserAction;
-
 import agent.browser.SmartLocator;
 import agent.planner.ActionPlan;
+import agent.utils.LoggerUtil;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.options.WaitForSelectorState;
 
 public class WaitAction implements BrowserAction {
+    
+    private static final LoggerUtil logger = LoggerUtil.getLogger(WaitAction.class);
+    
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
         String actionType = plan.getActionType();
@@ -32,7 +35,7 @@ public class WaitAction implements BrowserAction {
                     return handlePageLoadWait(page);
             }
         } catch (Exception e) {
-            System.err.println("❌ Wait action failed: " + e.getMessage());
+            logger.failure("Wait action failed: {}", e.getMessage());
             return false;
         }
     }
@@ -45,20 +48,20 @@ public class WaitAction implements BrowserAction {
             // Element name contains the number of seconds to wait
             String elementName = plan.getElementName();
             if (elementName == null || elementName.trim().isEmpty()) {
-                System.err.println("❌ No duration specified for time wait");
+                logger.failure("No duration specified for time wait");
                 return false;
             }
             
             int seconds = Integer.parseInt(elementName.trim());
-            System.out.println("⏱️  Waiting for " + seconds + " second(s)...");
+            logger.waiting(seconds);
             Thread.sleep(seconds * 1000L);
-            System.out.println("✅ Wait complete.");
+            logger.success("Wait complete");
             return true;
         } catch (NumberFormatException e) {
-            System.err.println("❌ Invalid wait duration: " + plan.getElementName());
+            logger.failure("Invalid wait duration: {}", plan.getElementName());
             return false;
         } catch (InterruptedException e) {
-            System.err.println("❌ Wait interrupted: " + e.getMessage());
+            logger.failure("Wait interrupted: {}", e.getMessage());
             Thread.currentThread().interrupt();
             return false;
         }
@@ -69,16 +72,16 @@ public class WaitAction implements BrowserAction {
      */
     private boolean handlePageLoadWait(Page page) {
         try {
-            System.out.println("⏳ Waiting for page to load (DOM ready)...");
+            logger.info("⏳ Waiting for page to load (DOM ready)...");
             // Use DOMCONTENTLOADED instead of NETWORKIDLE (more reliable)
             page.waitForLoadState(com.microsoft.playwright.options.LoadState.DOMCONTENTLOADED);
             Thread.sleep(2000); // Additional wait for dynamic content
-            System.out.println("✅ Page loaded successfully.");
+            logger.success("Page loaded successfully");
             return true;
         } catch (Exception e) {
             try {
                 Thread.sleep(2000);
-                System.out.println("✅ Page load wait complete (fallback).");
+                logger.success("Page load wait complete (fallback)");
                 return true;
             } catch (InterruptedException ie) {
                 return false;
@@ -92,11 +95,11 @@ public class WaitAction implements BrowserAction {
     private boolean handleElementAppearWait(Page page, SmartLocator locator, ActionPlan plan) {
         String elementName = plan.getElementName();
         if (elementName == null || elementName.trim().isEmpty()) {
-            System.err.println("❌ No element name specified for appearance wait");
+            logger.failure("No element name specified for appearance wait");
             return false;
         }
         
-        System.out.println("⏳ Waiting for '" + elementName + "' to appear...");
+        logger.info("⏳ Waiting for '{}' to appear...", elementName);
         
         try {
             // Use the smart locator to find and wait for the element
@@ -105,10 +108,10 @@ public class WaitAction implements BrowserAction {
             // Additional check to ensure it's visible
             element.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(30000));
             
-            System.out.println("✅ Element '" + elementName + "' is now visible.");
+            logger.success("Element '{}' is now visible", elementName);
             return true;
         } catch (Exception e) {
-            System.err.println("❌ Element '" + elementName + "' did not appear: " + e.getMessage());
+            logger.failure("Element '{}' did not appear: {}", elementName, e.getMessage());
             return false;
         }
     }
@@ -119,11 +122,11 @@ public class WaitAction implements BrowserAction {
     private boolean handleElementDisappearWait(Page page, SmartLocator locator, ActionPlan plan) {
         String elementName = plan.getElementName();
         if (elementName == null || elementName.trim().isEmpty()) {
-            System.err.println("❌ No element name specified for disappearance wait");
+            logger.failure("No element name specified for disappearance wait");
             return false;
         }
         
-        System.out.println("⏳ Waiting for '" + elementName + "' to disappear...");
+        logger.info("⏳ Waiting for '{}' to disappear...", elementName);
         
         try {
             // Try to find the element using smart locator
@@ -132,13 +135,12 @@ public class WaitAction implements BrowserAction {
             // Wait for it to be hidden (with timeout)
             element.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.HIDDEN).setTimeout(30000));
             
-            System.out.println("✅ Element '" + elementName + "' has disappeared.");
+            logger.success("Element '{}' has disappeared", elementName);
             return true;
         } catch (Exception e) {
             // If element is not found initially, it's already gone - success
-            System.out.println("✅ Element '" + elementName + "' is not present (already gone).");
+            logger.success("Element '{}' is not present (already gone)", elementName);
             return true;
         }
     }
 }
-

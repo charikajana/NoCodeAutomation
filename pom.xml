@@ -35,11 +35,17 @@
                 <version>2.17.0</version>
             </dependency>
 
-            <!-- Optional: Logging (Simple) -->
+            <!-- Logging (Logback) -->
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>1.4.14</version>
+            </dependency>
+            
             <dependency>
                 <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-simple</artifactId>
-                <version>2.0.7</version>
+                <artifactId>slf4j-api</artifactId>
+                <version>2.0.9</version>
             </dependency>
         </dependencies>
 
@@ -52,6 +58,28 @@
                 <configuration>
                     <mainClass>agent.AgentApplication</mainClass>
                 </configuration>
+                <executions>
+                    <!-- Single feature execution (default) -->
+                    <execution>
+                        <id>single-feature</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>agent.AgentApplication</mainClass>
+                        </configuration>
+                    </execution>
+                    <!-- All features execution -->
+                    <execution>
+                        <id>all-features</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>agent.AllFeaturesTestRunner</mainClass>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

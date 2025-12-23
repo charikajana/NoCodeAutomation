@@ -1,5 +1,6 @@
 package agent.browser.locator.builders;
 
+import agent.utils.LoggerUtil;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 
@@ -11,6 +12,8 @@ import java.util.Map;
  * Supports: Standard Select, React-Select, Material-UI, Ant Design, ChakraUI, and custom dropdowns
  */
 public class DynamicDropdownXPathBuilder {
+
+    private static final LoggerUtil logger = LoggerUtil.getLogger(DynamicDropdownXPathBuilder.class);
 
     public enum DropdownType {
         STANDARD_SELECT,
@@ -41,15 +44,15 @@ public class DynamicDropdownXPathBuilder {
             DropdownType type = detectType(tagName, className, role, dataTestId);
             metadata.put("type", type);
             
-            System.out.println("  🔍 Dropdown Analysis:");
-            System.out.println("     Tag: " + tagName);
-            System.out.println("     Class: " + className);
-            System.out.println("     Role: " + role);
-            System.out.println("     Detected Type: " + type);
+            logger.debug("Dropdown Analysis:");
+            logger.debug("   Tag: {}", tagName);
+            logger.debug("   Class: {}", className);
+            logger.debug("   Role: {}", role);
+            logger.debug("   Detected Type: {}", type);
             
             return metadata;
         } catch (Exception e) {
-            System.err.println("❌ Failed to analyze dropdown: " + e.getMessage());
+            logger.error("Failed to analyze dropdown: {}", e.getMessage());
             metadata.put("type", DropdownType.CUSTOM_DIV);
             return metadata;
         }

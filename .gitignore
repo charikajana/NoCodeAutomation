@@ -13,6 +13,11 @@ target/
 *.iml
 *.ipr
 .idea
+.playwright-mcp
+docs/
+logs/
+*.log
+.agent
 
 ### Eclipse ###
 .apt_generated

@@ -1,15 +1,17 @@
 package agent.browser.actions.click;
 
 import agent.browser.actions.BrowserAction;
-
 import agent.browser.SmartLocator;
 import agent.planner.ActionPlan;
+import agent.utils.LoggerUtil;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
-
 import agent.browser.locator.table.TableNavigator;
 
 public class ClickAction implements BrowserAction {
+    
+    private static final LoggerUtil logger = LoggerUtil.getLogger(ClickAction.class);
+    
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
         String targetName = plan.getElementName();
@@ -34,7 +36,7 @@ public class ClickAction implements BrowserAction {
              }
              
              if (scope == null) {
-                  System.err.println("FAILURE: Row not found for anchor: " + plan.getRowAnchor());
+                  logger.failure("Row not found for anchor: {}", plan.getRowAnchor());
                   return false;
               }
          }
@@ -47,19 +49,19 @@ public class ClickAction implements BrowserAction {
                 String type = (String) clickable.evaluate("el => el.type");
 
                 if ("input".equals(tagName) && ("radio".equals(type) || "checkbox".equals(type))) {
-                        System.out.println("Target is input[type=" + type + "], using force click.");
+                        logger.debug("Target is input[type={}], using force click", type);
                         clickable.click(new Locator.ClickOptions().setForce(true));
                 } else {
                         clickable.click();
                 }
             } catch (Exception e) {
-                System.out.println("Standard click failed, trying force click...");
+                logger.debug("Standard click failed, trying force click");
                 clickable.click(new Locator.ClickOptions().setForce(true));
             }
-            System.out.println("Clicked " + targetName);
+            logger.browserAction("Click", targetName);
             return true;
         } else {
-            System.err.println("FAILURE: Element not found for clicking: " + targetName);
+            logger.failure("Element not found for clicking: {}", targetName);
             return false;
         }
     }

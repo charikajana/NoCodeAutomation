@@ -1,15 +1,17 @@
 package agent.browser.actions.verify;
 
 import agent.browser.actions.BrowserAction;
-
 import agent.browser.SmartLocator;
 import agent.planner.ActionPlan;
+import agent.utils.LoggerUtil;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
-
 import agent.browser.locator.table.TableNavigator;
 
 public class VerifyTextAction implements BrowserAction {
+    
+    private static final LoggerUtil logger = LoggerUtil.getLogger(VerifyTextAction.class);
+    
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
         String value = plan.getValue();
@@ -17,11 +19,11 @@ public class VerifyTextAction implements BrowserAction {
         String textToVerify = (value != null && !value.isEmpty()) ? value : targetName;
         
         if (textToVerify == null) {
-            System.err.println("FAILURE: Verification failed - No text specified.");
+            logger.failure("Verification failed - No text specified");
             return false;
         }
 
-        System.out.println("Verifying text presence: " + textToVerify);
+        logger.debug("Verifying text presence: {}", textToVerify);
         
         // Determine search scope
         Locator searchScope = null;
@@ -29,7 +31,7 @@ public class VerifyTextAction implements BrowserAction {
              TableNavigator navigator = new TableNavigator();
              searchScope = navigator.findRowByAnchor(page, plan.getRowAnchor());
              if (searchScope == null) {
-                 System.err.println("FAILURE: Row not found for anchor: " + plan.getRowAnchor());
+                 logger.failure("Row not found for anchor: {}", plan.getRowAnchor());
                  return false;
              }
         }
@@ -84,27 +86,24 @@ public class VerifyTextAction implements BrowserAction {
             }
 
             if (visible || "VALUE/XPATH".equals(matchType) || "option".equalsIgnoreCase((String)foundElement.evaluate("el => el.tagName"))) {
-                System.out.println("--------------------------------------------------");
-                System.out.println(" ✅ VALIDATION SUCCESS");
-                System.out.println(" Expected: " + textToVerify);
-                System.out.println(" Found in Element: " + foundText);
-                System.out.println(" Match Strategy: " + matchType + (visible ? "" : " (Hidden/Value)"));
-                System.out.println("--------------------------------------------------");
+                logger.section("✅ VALIDATION SUCCESS");
+                logger.info(" Expected: {}", textToVerify);
+                logger.info(" Found in Element: {}", foundText);
+                logger.info(" Match Strategy: {}", matchType + (visible ? "" : " (Hidden/Value)"));
+                logger.info("--------------------------------------------------");
                 return true;
             } else {
-                System.err.println("--------------------------------------------------");
-                System.err.println(" ❌ VALIDATION FAILED");
-                System.err.println(" Expected: " + textToVerify);
-                System.err.println(" Issue: Element found but NOT visible");
-                System.err.println("--------------------------------------------------");
+                logger.section("❌ VALIDATION FAILED");
+                logger.error(" Expected: {}", textToVerify);
+                logger.error(" Issue: Element found but NOT visible");
+                logger.info("--------------------------------------------------");
                 return false;
             }
         } else {
-            System.err.println("--------------------------------------------------");
-            System.err.println(" ❌ VALIDATION FAILED");
-            System.err.println(" Expected: " + textToVerify);
-            System.err.println(" Issue: Text NOT found on page");
-            System.err.println("--------------------------------------------------");
+            logger.section("❌ VALIDATION FAILED");
+            logger.error(" Expected: {}", textToVerify);
+            logger.error(" Issue: Text NOT found on page");
+            logger.info("--------------------------------------------------");
             return false;
         }
     }

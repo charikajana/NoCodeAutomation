@@ -1,15 +1,17 @@
 package agent.browser.actions.input;
 
 import agent.browser.actions.BrowserAction;
-
 import agent.browser.SmartLocator;
 import agent.planner.ActionPlan;
+import agent.utils.LoggerUtil;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
-
 import agent.browser.locator.table.TableNavigator;
 
 public class FillAction implements BrowserAction {
+    
+    private static final LoggerUtil logger = LoggerUtil.getLogger(FillAction.class);
+    
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
         String targetName = plan.getElementName();
@@ -20,7 +22,7 @@ public class FillAction implements BrowserAction {
              TableNavigator navigator = new TableNavigator();
              scope = navigator.findRowByAnchor(page, plan.getRowAnchor());
              if (scope == null) {
-                 System.err.println("FAILURE: Row not found for anchor: " + plan.getRowAnchor());
+                 logger.failure("Row not found for anchor: {}", plan.getRowAnchor());
                  return false;
              }
         }
@@ -29,14 +31,14 @@ public class FillAction implements BrowserAction {
         if (input != null) {
             try {
                 input.fill(value != null ? value : "");
-                System.out.println("Filled '" + value + "' into " + targetName);
+                logger.browserAction("Fill", targetName + " = '" + value + "'");
                 return true;
             } catch (com.microsoft.playwright.PlaywrightException e) {
-                System.err.println("FAILURE: Element found for '" + targetName + "' but could not be filled (Errors: " + e.getMessage().split("\n")[0] + ")");
+                logger.failure("Element found for '{}' but could not be filled: {}", targetName, e.getMessage().split("\n")[0]);
                 return false;
             }
         } else {
-            System.err.println("FAILURE: Element not found for filling: " + targetName);
+            logger.failure("Element not found for filling: {}", targetName);
             return false;
         }
     }

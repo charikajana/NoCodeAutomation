@@ -1,19 +1,22 @@
 package agent.browser.actions.table;
 
 import agent.browser.actions.BrowserAction;
-
 import agent.browser.SmartLocator;
 import agent.browser.locator.builders.DynamicTableXPathBuilder;
 import agent.planner.ActionPlan;
 import agent.planner.EnhancedActionPlan;
+import agent.utils.LoggerUtil;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 
 public class VerifyRowNotExistsAction implements BrowserAction {
+    
+    private static final LoggerUtil logger = LoggerUtil.getLogger(VerifyRowNotExistsAction.class);
+    
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
         if (!(plan instanceof EnhancedActionPlan)) {
-            System.err.println("FAILURE: VerifyRowNotExistsAction requires EnhancedActionPlan");
+            logger.failure("VerifyRowNotExistsAction requires EnhancedActionPlan");
             return false;
         }
         
@@ -22,18 +25,18 @@ public class VerifyRowNotExistsAction implements BrowserAction {
         String columnValue = enhancedPlan.getRowConditionValue();
         
         if (columnName == null || columnValue == null) {
-            System.err.println("FAILURE: Column name and value required for row validation");
+            logger.failure("Column name and value required for row validation");
             return false;
         }
         
-        System.out.println("🔍 Verifying row does NOT exist where '" + columnName + "' = '" + columnValue + "'");
+        logger.info("🔍 Verifying row does NOT exist where '{}' = '{}'", columnName, columnValue);
         
         // Use XPath builder to check if row exists
         DynamicTableXPathBuilder builder = new DynamicTableXPathBuilder(page);
         String xpath = builder.buildRowXPath(columnName, columnValue);
         
         if (xpath == null) {
-            System.err.println("FAILURE: Could not build XPath for row validation");
+            logger.failure("Could not build XPath for row validation");
             return false;
         }
         
@@ -42,21 +45,19 @@ public class VerifyRowNotExistsAction implements BrowserAction {
         
         if (rowCount == 0) {
             // Row does NOT exist - SUCCESS!
-            System.out.println("--------------------------------------------------");
-            System.out.println(" ✅ VALIDATION SUCCESS");
-            System.out.println(" Expected: Row with '" + columnName + "' = '" + columnValue + "' should NOT exist");
-            System.out.println(" Actual  : Row NOT found (deleted successfully)");
-            System.out.println("--------------------------------------------------");
+            logger.section("✅ VALIDATION SUCCESS");
+            logger.info(" Expected: Row with '{}' = '{}' should NOT exist", columnName, columnValue);
+            logger.info(" Actual  : Row NOT found (deleted successfully)");
+            logger.info("--------------------------------------------------");
             return true;
         } else {
             // Row still exists - FAILURE!
-            String rowText = row.first().innerText().replaceAll("\\n", " | ");
-            System.out.println("--------------------------------------------------");
-            System.out.println(" ❌ VALIDATION FAILED");
-            System.out.println(" Expected: Row with '" + columnName + "' = '" + columnValue + "' should NOT exist");
-            System.out.println(" Actual  : Row STILL EXISTS");
-            System.out.println(" Row Content: " + rowText);
-            System.out.println("--------------------------------------------------");
+            String rowText = row.first().innerText().replaceAll("\n", " | ");
+            logger.section("❌ VALIDATION FAILED");
+            logger.error(" Expected: Row with '{}' = '{}' should NOT exist", columnName, columnValue);
+            logger.error(" Actual  : Row STILL EXISTS");
+            logger.error(" Row Content: {}", rowText);
+            logger.info("--------------------------------------------------");
             return false;
         }
     }

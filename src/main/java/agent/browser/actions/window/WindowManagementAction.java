@@ -1,9 +1,9 @@
 package agent.browser.actions.window;
 
 import agent.browser.actions.BrowserAction;
-
 import agent.browser.SmartLocator;
 import agent.planner.ActionPlan;
+import agent.utils.LoggerUtil;
 import com.microsoft.playwright.Page;
 
 import java.util.ArrayList;
@@ -16,6 +16,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class WindowManagementAction implements BrowserAction {
     
+    private static final LoggerUtil logger = LoggerUtil.getLogger(WindowManagementAction.class);
+    
     private static String mainWindowHandle = null;
     private static List<String> allWindowHandles = new ArrayList<>();
     
@@ -26,7 +28,7 @@ public class WindowManagementAction implements BrowserAction {
         // Initialize main window on first action
         if (mainWindowHandle == null) {
             mainWindowHandle = getWindowHandle(page);
-            System.out.println("📌 Main window initialized: " + mainWindowHandle);
+            logger.info("📌 Main window initialized: {}", mainWindowHandle);
         }
         
         switch (actionType) {
@@ -43,7 +45,7 @@ public class WindowManagementAction implements BrowserAction {
                 return closeNewWindow(page);
                 
             default:
-                System.err.println("Unknown window action: " + actionType);
+                logger.error("Unknown window action: {}", actionType);
                 return false;
         }
     }
@@ -59,14 +61,14 @@ public class WindowManagementAction implements BrowserAction {
             if (pages.size() >= 2) {
                 Page newPage = pages.get(pages.size() - 1);
                 newPage.bringToFront();
-                System.out.println("✅ Switched to new window");
-                System.out.println("   Current URL: " + newPage.url());
-                System.out.println("   Total windows: " + pages.size());
+                logger.success("Switched to new window");
+                logger.info("   Current URL: {}", newPage.url());
+                logger.info("   Total windows: {}", pages.size());
                 return true;
             }
             
             // Otherwise wait for new page event (up to 10 seconds)
-            System.out.println("⏳ Waiting for new window to open...");
+            logger.info("⏳ Waiting for new window to open...");
             CompletableFuture<Page> newPageFuture = new CompletableFuture<>();
             
             page.context().onPage(newPageFuture::complete);
@@ -76,16 +78,16 @@ public class WindowManagementAction implements BrowserAction {
                 newPage.waitForLoadState();
                 newPage.bringToFront();
                 
-                System.out.println("✅ Switched to new window");
-                System.out.println("   Current URL: " + newPage.url());
-                System.out.println("   Total windows: " + page.context().pages().size());
+                logger.success("Switched to new window");
+                logger.info("   Current URL: {}", newPage.url());
+                logger.info("   Total windows: {}", page.context().pages().size());
                 return true;
             } catch (Exception e) {
-                System.err.println("❌ No new window opened within 10 seconds");
+                logger.failure("No new window opened within 10 seconds");
                 return false;
             }
         } catch (Exception e) {
-            System.err.println("❌ Error switching to new window: " + e.getMessage());
+            logger.error("Error switching to new window: {}", e.getMessage());
             return false;
         }
     }
@@ -98,7 +100,7 @@ public class WindowManagementAction implements BrowserAction {
             List<Page> pages = page.context().pages();
             
             if (pages.isEmpty()) {
-                System.err.println("❌ FAILED: No windows open");
+                logger.failure("No windows open");
                 return false;
             }
             
@@ -106,13 +108,13 @@ public class WindowManagementAction implements BrowserAction {
             Page mainPage = pages.get(0);
             mainPage.bringToFront();
             
-            System.out.println("✅ Switched to main window");
-            System.out.println("   Current URL: " + mainPage.url());
-            System.out.println("   Total windows: " + pages.size());
+            logger.success("Switched to main window");
+            logger.info("   Current URL: {}", mainPage.url());
+            logger.info("   Total windows: {}", pages.size());
             
             return true;
         } catch (Exception e) {
-            System.err.println("❌ Error switching to main window: " + e.getMessage());
+            logger.error("Error switching to main window: {}", e.getMessage());
             return false;
         }
     }
@@ -126,7 +128,7 @@ public class WindowManagementAction implements BrowserAction {
             int totalBefore = pages.size();
             
             if (totalBefore == 1) {
-                System.err.println("⚠️ WARNING: Cannot close the last remaining window");
+                logger.warning("Cannot close the last remaining window");
                 return false;
             }
             
@@ -134,13 +136,13 @@ public class WindowManagementAction implements BrowserAction {
             Page currentPage = getCurrentPage(page.context());
             currentPage.close();
             
-            System.out.println("✅ Closed current window");
-            System.out.println("   Windows before: " + totalBefore);
-            System.out.println("   Windows after: " + (totalBefore - 1));
+            logger.success("Closed current window");
+            logger.info("   Windows before: {}", totalBefore);
+            logger.info("   Windows after: {}", (totalBefore - 1));
             
             return true;
         } catch (Exception e) {
-            System.err.println("❌ Error closing current window: " + e.getMessage());
+            logger.error("Error closing current window: {}", e.getMessage());
             return false;
         }
     }
@@ -157,8 +159,8 @@ public class WindowManagementAction implements BrowserAction {
                 Page newPage = pages.get(pages.size() - 1);
                 newPage.close();
                 
-                System.out.println("✅ Closed new window");
-                System.out.println("   Remaining windows: " + (pages.size() - 1));
+                logger.success("Closed new window");
+                logger.info("   Remaining windows: {}", (pages.size() - 1));
                 
                 // Switch back to main window
                 pages.get(0).bringToFront();
@@ -166,7 +168,7 @@ public class WindowManagementAction implements BrowserAction {
             }
             
             // Otherwise wait for new page (up to 10 seconds)
-            System.out.println("⏳ Waiting for new window to open before closing...");
+            logger.info("⏳ Waiting for new window to open before closing...");
             CompletableFuture<Page> newPageFuture = new CompletableFuture<>();
             
             page.context().onPage(newPageFuture::complete);
@@ -176,18 +178,18 @@ public class WindowManagementAction implements BrowserAction {
                 newPage.waitForLoadState();
                 newPage.close();
                 
-                System.out.println("✅ Closed new window");
-                System.out.println("   Remaining windows: " + page.context().pages().size());
+                logger.success("Closed new window");
+                logger.info("   Remaining windows: {}", page.context().pages().size());
                 
                 // Switch back to main
                 page.context().pages().get(0).bringToFront();
                 return true;
             } catch (Exception e) {
-                System.err.println("❌ No new window opened within 10 seconds");
+                logger.failure("No new window opened within 10 seconds");
                 return false;
             }
         } catch (Exception e) {
-            System.err.println("❌ Error closing new window: " + e.getMessage());
+            logger.error("Error closing new window: {}", e.getMessage());
             return false;
         }
     }

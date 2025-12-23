@@ -3,6 +3,7 @@ package agent.browser.actions.alert;
 import agent.browser.actions.BrowserAction;
 import agent.browser.SmartLocator;
 import agent.planner.ActionPlan;
+import agent.utils.LoggerUtil;
 import com.microsoft.playwright.Page;
 
 /**
@@ -13,6 +14,8 @@ import com.microsoft.playwright.Page;
  */
 public class SetupAcceptAlertAction implements BrowserAction {
     
+    private static final LoggerUtil logger = LoggerUtil.getLogger(SetupAcceptAlertAction.class);
+    
     private static volatile boolean alertHandled = false;
     private static volatile String lastAlertMessage = "";
     
@@ -22,7 +25,7 @@ public class SetupAcceptAlertAction implements BrowserAction {
             alertHandled = false;
             lastAlertMessage = "";
             
-            System.out.println("🔔 Setting up alert handler (will auto-accept next dialog)");
+            logger.info("🔔 Setting up alert handler (will auto-accept next dialog)");
             
             // Set up persistent dialog handler
             page.onDialog(dialog -> {
@@ -32,26 +35,22 @@ public class SetupAcceptAlertAction implements BrowserAction {
                     
                     lastAlertMessage = message;
                     
-                    System.out.println("--------------------------------------------------");
-                    System.out.println(" 🔔 ALERT DETECTED & AUTO-ACCEPTED");
-                    System.out.println(" Type: " + type);
-                    System.out.println(" Message: " + message);
-                    System.out.println("--------------------------------------------------");
+                    logger.alert(type, message + " & AUTO-ACCEPTED");
+                    logger.info("--------------------------------------------------");
                     
                     dialog.accept();
                     alertHandled = true;
                     
                 } catch (Exception e) {
-                    System.err.println("Error in dialog handler: " + e.getMessage());
+                    logger.error("Error in dialog handler: {}", e.getMessage());
                 }
             });
             
-            System.out.println("✅ Alert handler ready - next dialog will be auto-accepted");
+            logger.success("Alert handler ready - next dialog will be auto-accepted");
             return true;
             
         } catch (Exception e) {
-            System.err.println("Error setting up alert handler: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error setting up alert handler: {}", e.getMessage(), e);
             return false;
         }
     }

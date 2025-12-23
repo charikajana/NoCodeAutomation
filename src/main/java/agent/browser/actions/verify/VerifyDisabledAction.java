@@ -1,13 +1,16 @@
 package agent.browser.actions.verify;
 
 import agent.browser.actions.BrowserAction;
-
 import agent.browser.SmartLocator;
 import agent.planner.ActionPlan;
+import agent.utils.LoggerUtil;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 
 public class VerifyDisabledAction implements BrowserAction {
+    
+    private static final LoggerUtil logger = LoggerUtil.getLogger(VerifyDisabledAction.class);
+    
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
         String targetName = plan.getElementName();
@@ -23,20 +26,18 @@ public class VerifyDisabledAction implements BrowserAction {
             }
 
             if (!isEnabled) {
-                System.out.println("--------------------------------------------------");
-                System.out.println(" VALIDATION SUCCESS");
-                System.out.println(" Element '" + targetName + "' matches expected state: DISABLED");
-                System.out.println("--------------------------------------------------");
+                logger.section("VALIDATION SUCCESS");
+                logger.info(" Element '{}' matches expected state: DISABLED", targetName);
+                logger.info("--------------------------------------------------");
                 return true;
             } else {
-                System.err.println("--------------------------------------------------");
-                System.err.println(" VALIDATION FAILED");
-                System.err.println(" Element '" + targetName + "' is ENABLED");
-                System.err.println("--------------------------------------------------");
+                logger.section("VALIDATION FAILED");
+                logger.error(" Element '{}' is ENABLED", targetName);
+                logger.info("--------------------------------------------------");
                 return false;
             }
         } else {
-             System.err.println("FAILURE: Element not found for disablement check: " + targetName);
+             logger.failure("Element not found for disablement check: {}", targetName);
              return false;
         }
     }

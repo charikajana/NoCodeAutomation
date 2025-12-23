@@ -1,5 +1,6 @@
 package agent.browser.locator.table;
 
+import agent.utils.LoggerUtil;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import agent.browser.locator.builders.DynamicTableXPathBuilder;
@@ -9,13 +10,15 @@ import agent.browser.locator.builders.DynamicTableXPathBuilder;
  * Now uses DynamicTableXPathBuilder for framework-agnostic row finding.
  */
 public class TableNavigator {
+    
+    private static final LoggerUtil logger = LoggerUtil.getLogger(TableNavigator.class);
 
     /**
      * Finds a Row element using column name and value (RECOMMENDED)
      * Example: findRowByColumnValue(page, "First Name", "John")
      */
     public Locator findRowByColumnValue(Page page, String columnName, String columnValue) {
-        System.out.println("🎯 Finding row where '" + columnName + "' = '" + columnValue + "'");
+        logger.info("🎯 Finding row where '{}' = '{}'", columnName, columnValue);
         
         DynamicTableXPathBuilder builder = new DynamicTableXPathBuilder(page);
         return builder.findRow(columnName, columnValue);
@@ -28,8 +31,8 @@ public class TableNavigator {
     public Locator findRowByAnchor(Page page, String anchorText) {
         if (anchorText == null || anchorText.isEmpty()) return null;
 
-        System.out.println("⚠️  Using legacy anchor-based search for: '" + anchorText + "'");
-        System.out.println("   (Consider using column-based search for better accuracy)");
+        logger.warning("Using legacy anchor-based search for: '{}'", anchorText);
+        logger.warning("(Consider using column-based search for better accuracy)");
         
         // CRITICAL FIX: Search within table only - specifically target React Table structure
         String tableSelector = "table, [role='grid'], [role='table'], .rt-table, .ReactTable, " +
@@ -38,31 +41,31 @@ public class TableNavigator {
         Locator tableContainer = page.locator(tableSelector).first();
         
         if (tableContainer.count() == 0) {
-            System.err.println("  > No table found on page!");
+            logger.error("No table found on page!");
             return null;
         }
         
         // Debug: Show what container was found
         try {
             String tableClass = (String) tableContainer.evaluate("el => el.className || el.tagName");
-            System.out.println("  > Found table container: " + tableClass);
+            logger.debug("Found table container: {}", tableClass);
         } catch (Exception e) {
-            System.out.println("  > Found table container (class read failed)");
+            logger.debug("Found table container (class read failed)");
         }
         
-        System.out.println("  > Searching within table element...");
+        logger.debug("Searching within table element");
         
         // 1. Locate the text element WITHIN the table only (not entire page)
         Locator cell = tableContainer.getByText(anchorText, new Locator.GetByTextOptions().setExact(true)).first();
         
         if (cell.count() == 0) {
             // Fallback: try non-exact match if exact fails
-             System.out.println("  > Exact match failed, trying contains...");
+             logger.debug("Exact match failed, trying contains");
              cell = tableContainer.getByText(anchorText).first();
         }
 
         if (cell.count() == 0) {
-             System.out.println("  > Anchor text not found in table.");
+             logger.debug("Anchor text not found in table");
              return null;
         }
 
@@ -71,13 +74,13 @@ public class TableNavigator {
 
         if (row.count() > 0) {
              String rowText = (String) row.evaluate("el => el.innerText.substring(0, Math.min(100, el.innerText.length))");
-             System.out.println("  > Row found: " + row.evaluate("el => el.tagName + '.' + el.className") + " via robust XPath.");
-             System.out.println("  > Row content preview: " + rowText.replaceAll("\\n", " | "));
+             logger.debug("Row found: {} via robust XPath", row.evaluate("el => el.tagName + '.' + el.className"));
+             logger.debug("Row content preview: {}", rowText.replaceAll("\n", " | "));
              return row;
         }
 
         // 3. Fallback: Sibling Heuristic (The "Div Soup" strategy)
-        System.out.println("  > Robust XPath failed. Trying Sibling Heuristic...");
+        logger.debug("Robust XPath failed. Trying Sibling Heuristic");
         return findRowUsingHeuristic(cell);
     }
 
@@ -99,7 +102,7 @@ public class TableNavigator {
                  String sTag = (String) sibling.evaluate("el => el.tagName");
                  
                  if (pTag != null && pTag.equals(sTag)) {
-                     System.out.println("  > Found row via Sibling Heuristic: <" + pTag + ">");
+                     logger.debug("Found row via Sibling Heuristic: <{}>", pTag);
                      return parent;
                  }
              }

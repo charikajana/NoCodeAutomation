@@ -1,13 +1,16 @@
 package agent.browser.actions.click;
 
 import agent.browser.actions.BrowserAction;
-
 import agent.browser.SmartLocator;
 import agent.planner.ActionPlan;
+import agent.utils.LoggerUtil;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 
 public class DoubleClickAction implements BrowserAction {
+    
+    private static final LoggerUtil logger = LoggerUtil.getLogger(DoubleClickAction.class);
+    
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
         String targetName = plan.getElementName();
@@ -17,14 +20,14 @@ public class DoubleClickAction implements BrowserAction {
         if (clickable != null) {
             try {
                 clickable.dblclick();
-                System.out.println("✅ Double-clicked " + targetName);
+                logger.browserAction("Double-click", targetName);
                 return true;
             } catch (Exception e) {
-                System.err.println("❌ Double-click failed: " + e.getMessage());
+                logger.failure("Double-click failed: {}", e.getMessage());
                 return false;
             }
         } else {
-            System.err.println("FAILURE: Element not found for double-clicking: " + targetName);
+            logger.failure("Element not found for double-clicking: {}", targetName);
             return false;
         }
     }

@@ -3,12 +3,15 @@ package agent.browser;
 import agent.browser.locator.core.*;
 import agent.browser.locator.builders.*;
 import agent.browser.locator.table.*;
+import agent.utils.LoggerUtil;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import java.util.List;
 
 public class SmartLocator {
 
+    private static final LoggerUtil logger = LoggerUtil.getLogger(SmartLocator.class);
+    
     private final Page page;
     private final DomScanner docScanner;
     private final CandidateScorer scorer;
@@ -42,7 +45,8 @@ public class SmartLocator {
             // Throttle logging: only log every 5 seconds instead of every 500ms
             long currentTime = System.currentTimeMillis();
             if (currentTime - lastLogTime > 5000) {
-                System.out.println("⏳ Still waiting for element: '" + name + "' (attempt " + retryCount + "/" + maxRetries + ")");
+                logger.waiting(5);
+                logger.debug("Still waiting for element: '{}' (attempt {}/{})", name, retryCount, maxRetries);
                 lastLogTime = currentTime;
             }
             
@@ -55,11 +59,11 @@ public class SmartLocator {
         }
         
         // Log clear failure message
-        System.err.println("❌ TIMEOUT: Element '" + name + "' not found after " + retryCount + " attempts (" + (30000/1000) + "s)");
+        logger.failure("TIMEOUT: Element '{}' not found after {} attempts ({}s)", name, retryCount, 30);
         if (scope != null) {
-            System.err.println("   Searched within row scope - element may not exist in this row");
+            logger.warning("Searched within row scope - element may not exist in this row");
         }
-        System.err.println("   💡 Tip: Check if the step syntax is correct and element exists on the page");
+        logger.info("💡 Tip: Check if the step syntax is correct and element exists on the page");
         
         return null;
     }
@@ -71,7 +75,7 @@ public class SmartLocator {
     public Locator findSmartElement(String name, String parsedType, Locator scope) {
         if (name == null) return null;
 
-        System.out.println("Analyzing DOM for target: '" + name + "' (Type: " + parsedType + ")" + (scope != null ? " [Scoped]" : ""));
+        logger.analysis("Analyzing DOM for target: '{}' (Type: {}){}", name, parsedType, (scope != null ? " [Scoped]" : ""));
 
         // 1. Scan DOM (Scoped or Global)
         List<ElementCandidate> elements = (scope != null) ? docScanner.scan(scope) : docScanner.scan(page);
@@ -90,17 +94,17 @@ public class SmartLocator {
 
         // Debug: Show top candidates if no strong match
         if (bestScore <= 30 && scope != null) {
-            System.out.println("  🔍 DEBUG: Elements found in row scope:");
+            logger.debug("Elements found in row scope:");
             elements.stream()
                 .limit(10)
                 .forEach(el -> {
                     double s = scorer.score(el, name, parsedType);
-                    System.out.println("     - " + el.tag + 
-                        (el.text.isEmpty() ? "" : " text='" + el.text.substring(0, Math.min(20, el.text.length())) + "'") +
-                        (el.title.isEmpty() ? "" : " title='" + el.title + "'") +
-                        (el.label.isEmpty() ? "" : " aria-label='" + el.label + "'") +
-                        (el.className.isEmpty() ? "" : " class='" + el.className.substring(0, Math.min(30, el.className.length())) + "'") +
-                        " → score=" + s);
+                    logger.debug("   - {} {} {} {} → score={}",
+                        el.tag,
+                        (el.text.isEmpty() ? "" : " text='" + el.text.substring(0, Math.min(20, el.text.length())) + "'"),
+                        (el.title.isEmpty() ? "" : " title='" + el.title + "'"),
+                        (el.label.isEmpty() ? "" : " aria-label='" + el.label + "'"),
+                        s);
                 });
         }
 
@@ -109,7 +113,7 @@ public class SmartLocator {
             return locatorFactory.createLocator(bestElement, bestScore, parsedType, scope);
         }
         
-        System.out.println("  > No strong match found for '" + name + "'");
+        logger.debug("No strong match found for '{}'", name);
         return null;
     }
 }

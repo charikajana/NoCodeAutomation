@@ -11,12 +11,15 @@ import agent.browser.actions.table.*;
 import agent.browser.actions.utils.*;
 import agent.browser.actions.window.*;
 import agent.browser.actions.alert.*;
+import agent.utils.LoggerUtil;
 import com.microsoft.playwright.*;
 import java.util.HashMap;
 import java.util.Map;
 
 public class BrowserService {
 
+    private static final LoggerUtil logger = LoggerUtil.getLogger(BrowserService.class);
+    
     private Playwright playwright;
     private Browser browser;
     private Page page;
@@ -71,6 +74,7 @@ public class BrowserService {
     }
 
     public void startBrowser() {
+        logger.info("Starting browser...");
         playwright = Playwright.create();
         browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(false));
         page = browser.newPage();
@@ -79,6 +83,7 @@ public class BrowserService {
         
         // Initialize SmartLocator with the page
         smartLocator = new SmartLocator(page);
+        logger.success("Browser started successfully");
     }
 
     public boolean executeAction(ActionPlan plan) {
@@ -89,11 +94,12 @@ public class BrowserService {
         if (handler != null) {
             // Always use the currently active page
             Page activePage = getActivePage();
+            logger.debug("Executing action: {} for step: {}", actionType, stepText);
             boolean success = handler.execute(activePage, smartLocator, plan);
             plan.setExecuted(true);
             return success;
         } else {
-            System.err.println("Unknown action: " + actionType + " for step: " + stepText);
+            logger.error("Unknown action: {} for step: {}", actionType, stepText);
             return false;
         }
     }
@@ -114,7 +120,9 @@ public class BrowserService {
 
 
     public void closeBrowser() {
+        logger.info("Closing browser...");
         if (browser != null) browser.close();
         if (playwright != null) playwright.close();
+        logger.success("Browser closed successfully");
     }
 }

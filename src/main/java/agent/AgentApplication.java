@@ -4,12 +4,16 @@ import agent.browser.BrowserService;
 import agent.feature.FeatureReader;
 import agent.planner.ActionPlan;
 import agent.planner.SmartStepParser;
+import agent.utils.LoggerUtil;
 
 import java.util.List;
 
 public class AgentApplication {
+    
+    private static final LoggerUtil logger = LoggerUtil.getLogger(AgentApplication.class);
+    
     public static void main(String[] args) throws Exception {
-        System.out.println("Simple Test Agent started...");
+        logger.info("Simple Test Agent started...");
 
         FeatureReader reader = new FeatureReader();
         SmartStepParser planner = new SmartStepParser();
@@ -30,31 +34,32 @@ public class AgentApplication {
             for (String step : steps) {
                 if (!shouldContinue) {
                     skipped++;
-                    System.out.println("⏭️  SKIPPED: " + step);
+                    logger.warn("⏭️  SKIPPED: {}", step);
                     continue;
                 }
                 
                 ActionPlan plan = planner.parseStep(step);
-                System.out.println(plan);
+                logger.debug(plan.toString());
                 
                 // Check if this is a composite action plan
                 if (plan instanceof agent.planner.CompositeActionPlan) {
                     agent.planner.CompositeActionPlan compositePlan = (agent.planner.CompositeActionPlan) plan;
                     boolean allSubActionsSucceeded = true;
                     
-                    System.out.println("  🔄 Executing " + compositePlan.getSubActionCount() + " sub-actions...");
+                    logger.info("  🔄 Executing {} sub-actions...", compositePlan.getSubActionCount());
                     
                     // Execute each sub-action sequentially
                     int subIndex = 1;
                     for (ActionPlan subAction : compositePlan.getSubActions()) {
-                        System.out.println("    ▶️  Sub-action " + subIndex + "/" + compositePlan.getSubActionCount() + ": " + subAction.getActionType());
+                        logger.info("    ▶️  Sub-action {}/{}: {}", 
+                            subIndex, compositePlan.getSubActionCount(), subAction.getActionType());
                         
                         boolean subSuccess = browserService.executeAction(subAction);
                         
                         if (subSuccess) {
-                            System.out.println("    ✅ Sub-action " + subIndex + " succeeded");
+                            logger.success("    Sub-action {} succeeded", subIndex);
                         } else {
-                            System.err.println("    ❌ Sub-action " + subIndex + " failed");
+                            logger.failure("    Sub-action {} failed", subIndex);
                             allSubActionsSucceeded = false;
                             break; // Stop executing remaining sub-actions on first failure
                         }
@@ -63,11 +68,11 @@ public class AgentApplication {
                     
                     if (allSubActionsSucceeded) {
                         passed++;
-                        System.out.println("  ✅ All sub-actions completed successfully");
+                        logger.success("  All sub-actions completed successfully");
                     } else {
                         failed++;
                         shouldContinue = false;
-                        System.err.println("\n❌ EXECUTION STOPPED: Composite action failed, skipping remaining steps\n");
+                        logger.error("\n❌ EXECUTION STOPPED: Composite action failed, skipping remaining steps\n");
                     }
                 } else {
                     // Regular single action
@@ -79,27 +84,16 @@ public class AgentApplication {
                         failed++;
                         // Stop execution on first failure to prevent cascading errors
                         shouldContinue = false;
-                        System.err.println("\n❌ EXECUTION STOPPED: Step failed, skipping remaining steps to prevent uncontrolled loop\n");
+                        logger.error("\n❌ EXECUTION STOPPED: Step failed, skipping remaining steps to prevent uncontrolled loop\n");
                     }
                 }
             }
         } catch (Throwable e) {
-            System.err.println("Critical Error (Agent Crash): " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Critical Error (Agent Crash): {}", e.getMessage(), e);
             shouldContinue = false;
         } finally {
             browserService.closeBrowser();
-
-            System.out.println("\n==========================================");
-            System.out.println("       EXECUTION SUMMARY");
-            System.out.println("==========================================");
-            System.out.println("Total Steps : " + totalSteps);
-            System.out.println("Passed      : " + passed);
-            System.out.println("Failed      : " + failed);
-            System.out.println("Skipped     : " + skipped);
-            System.out.println("==========================================\n");
-
-           // System.exit(failed > 0 ? 1 : 0);
+            logger.summary("EXECUTION SUMMARY", totalSteps, passed, failed, skipped);
         }
     }
 }

@@ -1,5 +1,6 @@
 package agent.browser.locator.builders;
 
+import agent.utils.LoggerUtil;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 
@@ -8,6 +9,8 @@ import com.microsoft.playwright.Page;
  * Works with ANY table structure: HTML tables, React tables, AG-Grid, Material tables, etc.
  */
 public class DynamicTableXPathBuilder {
+    
+    private static final LoggerUtil logger = LoggerUtil.getLogger(DynamicTableXPathBuilder.class);
     
     private Page page;
     private String rowSelector;
@@ -23,7 +26,7 @@ public class DynamicTableXPathBuilder {
      * Automatically detects the table structure on the page
      */
     private void detectTableStructure() {
-        System.out.println("🔍 Detecting table structure...");
+        logger.info("🔍 Detecting table structure...");
         
         // Try different table structures - MOST SPECIFIC FIRST
         // React Table / ARIA Grid with gridcell (DemoQA uses role='row' and role='gridcell')
@@ -38,7 +41,7 @@ public class DynamicTableXPathBuilder {
         // Generic div-based (last resort)
         if (tryStructure("div[class*='row']", "div[class*='cell'], div[class*='td']", "Div Table")) return;
         
-        System.err.println("⚠️ Could not detect table structure, using fallback");
+        logger.warning("Could not detect table structure, using fallback");
         rowSelector = "*[role='row'], tr, div[class*='row']";
         cellSelector = "*[role='gridcell'], div[class*='rt-td'], td, div[class*='cell']";
         detected = true;
@@ -54,9 +57,9 @@ public class DynamicTableXPathBuilder {
                 this.rowSelector = rowSel;
                 this.cellSelector = cellSel;
                 this.detected = true;
-                System.out.println("  ✅ Detected: " + description);
-                System.out.println("     Row selector: " + rowSel);
-                System.out.println("     Cell selector: " + cellSel);
+                logger.success("Detected: {}", description);
+                logger.debug("   Row selector: {}", rowSel);
+                logger.debug("   Cell selector: {}", cellSel);
                 return true;
             }
         }
@@ -77,15 +80,15 @@ public class DynamicTableXPathBuilder {
         // Find column index first
         int columnIndex = findColumnIndex(columnName);
         if (columnIndex < 0) {
-            System.err.println("❌ Column '" + columnName + "' not found");
+            logger.failure("Column '{}' not found", columnName);
             return null;
         }
         
-        System.out.println("  📍 Column '" + columnName + "' found at index: " + columnIndex);
+        logger.debug("Column '{}' found at index: {}", columnName, columnIndex);
         
         // Build dynamic XPath
         String xpath = buildDynamicXPath(columnIndex, columnValue);
-        System.out.println("  🎯 Generated XPath: " + xpath);
+        logger.debug("Generated XPath: {}", xpath);
         
         return xpath;
     }
@@ -200,13 +203,13 @@ public class DynamicTableXPathBuilder {
         Locator row = page.locator(xpath).first();
         
         if (row.count() > 0) {
-            String preview = row.innerText().replaceAll("\\n", " | ");
-            System.out.println("  ✅ Row found!");
-            System.out.println("  📄 Content: " + preview.substring(0, Math.min(100, preview.length())));
+            String preview = row.innerText().replaceAll("\n", " | ");
+            logger.success("Row found!");
+            logger.debug("   Content: {}", preview.substring(0, Math.min(100, preview.length())));
             return row;
         }
         
-        System.err.println("  ❌ No row found matching XPath");
+        logger.failure("No row found matching XPath");
         return null;
     }
 }

@@ -1,10 +1,13 @@
 package agent.browser.locator.core;
 
+import agent.utils.LoggerUtil;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 
 public class LocatorFactory {
 
+    private static final LoggerUtil logger = LoggerUtil.getLogger(LocatorFactory.class);
+    
     private final Page page;
 
     public LocatorFactory(Page page) {
@@ -21,7 +24,7 @@ public class LocatorFactory {
          String foundText = element.text;
          String foundFor = element.forAttr;
          
-         System.out.println("  > Found Winner: <" + foundTag + "> Text:'" + foundText + "' ID:'" + foundId + "' (Score: " + score + ")");
+         logger.debug("Found Winner: <{}> Text:'{}' ID:'{}' (Score: {})", foundTag, foundText, foundId, score);
          
          Locator finalLocator = null;
          
@@ -65,13 +68,13 @@ public class LocatorFactory {
          if (isFill && !"input".equals(foundTag) && !"textarea".equals(foundTag)) {
              // 1. If label with 'for', use that
              if ("label".equals(foundTag) && foundFor != null && !foundFor.isEmpty()) {
-                 System.out.println("  > Refining label match to linked input #" + foundFor);
+                 logger.debug("Refining label match to linked input #{}", foundFor);
                  return page.locator("#" + foundFor);
              }
              // 2. Look for nested input/textarea
              Locator nested = finalLocator.locator("input, textarea").first();
              if (nested.count() > 0) {
-                 System.out.println("  > Refining wrapper match to nested input.");
+                 logger.debug("Refining wrapper match to nested input");
                  return nested;
              }
              
@@ -79,7 +82,7 @@ public class LocatorFactory {
              Locator parent = finalLocator.locator("xpath=..");
              Locator sibling = parent.locator("input, textarea").first();
              if (sibling.count() > 0) {
-                 System.out.println("  > Refining match to sibling input.");
+                 logger.debug("Refining match to sibling input");
                  return sibling;
              }
 
@@ -87,11 +90,11 @@ public class LocatorFactory {
              Locator grandParent = finalLocator.locator("xpath=../..");
              Locator cousin = grandParent.locator("input, textarea").first();
              if (cousin.count() > 0) {
-                 System.out.println("  > Refining match to cousin input.");
+                 logger.debug("Refining match to cousin input");
                  return cousin;
              }
              
-             System.out.println("  > Match found (" + foundTag + ") but not a valid input/textarea. Discarding.");
+             logger.debug("Match found ({}) but not a valid input/textarea. Discarding", foundTag);
              return null;
          }
 
@@ -99,13 +102,13 @@ public class LocatorFactory {
          if (isSelect && !"select".equals(foundTag)) {
              // 1. If label with 'for', use that
              if ("label".equals(foundTag) && foundFor != null && !foundFor.isEmpty()) {
-                 System.out.println("  > Refining label match to linked select #" + foundFor);
+                 logger.debug("Refining label match to linked select #{}", foundFor);
                  return page.locator("#" + foundFor);
              }
              // 2. Look for nested select
              Locator nested = finalLocator.locator("select").first();
              if (nested.count() > 0) {
-                 System.out.println("  > Refining wrapper match to nested select.");
+                 logger.debug("Refining wrapper match to nested select");
                  return nested;
              }
              
@@ -113,27 +116,27 @@ public class LocatorFactory {
              Locator parent = finalLocator.locator("xpath=..");
              Locator sibling = parent.locator("select").first();
              if (sibling.count() > 0) {
-                 System.out.println("  > Refining match to sibling select.");
+                 logger.debug("Refining match to sibling select");
                  return sibling;
              }
 
              // 4. Before checking cousins, check for React-Select/custom dropdowns
              // This prevents false matches with unrelated select elements on the page
-             System.out.println("  > No <select> found in immediate vicinity. Checking for custom dropdown patterns...");
+             logger.debug("No <select> found in immediate vicinity. Checking for custom dropdown patterns");
              
              // 4a. Check for React-Select container as direct sibling of the label
              // Pattern: <p>Label</p> <div class="react-select-container">...</div>
              // OR: <p><b>Label</b></p> <div class="react-select-container">...</div> (check parent's sibling)
              Locator reactSelectSibling = finalLocator.locator("xpath=following-sibling::*[1][contains(@class, 'container') or contains(@class, '-container') or contains(@id, 'react-select')]").first();
              if (reactSelectSibling.count() > 0) {
-                 System.out.println("  > Found React-Select container as next sibling of label, refining to it.");
+                 logger.debug("Found React-Select container as next sibling of label, refining to it");
                  return reactSelectSibling;
              }
              
              // 4a-ii. If not found, check parent's next sibling (handles nested labels like <p><b>Text</b></p>)
              Locator parentSibling = finalLocator.locator("xpath=../following-sibling::*[1][contains(@class, 'container') or contains(@class, '-container') or contains(@id, 'react-select')]").first();
              if (parentSibling.count() > 0) {
-                 System.out.println("  > Found React-Select container as next sibling of label's parent, refining to it.");
+                 logger.debug("Found React-Select container as next sibling of label's parent, refining to it");
                  return parentSibling;
              }
              
@@ -143,7 +146,7 @@ public class LocatorFactory {
              if (parentNextSibling.count() > 0) {
                  Locator nestedReactSelect = parentNextSibling.locator("div[class*='container'], div[class*='-container'], div[id*='react-select'], div[id*='OptGroup']").first();
                  if (nestedReactSelect.count() > 0) {
-                     System.out.println("  > Found React-Select container in parent's next sibling, refining to it.");
+                     logger.debug("Found React-Select container in parent's next sibling, refining to it");
                      return nestedReactSelect;
                  }
              }
@@ -152,12 +155,12 @@ public class LocatorFactory {
              Locator grandParent = finalLocator.locator("xpath=../..");
              Locator cousin = grandParent.locator("select").first();
              if (cousin.count() > 0) {
-                 System.out.println("  > Refining match to cousin select (fallback).");
+                 logger.debug("Refining match to cousin select (fallback)");
                  return cousin;
              }
              
              // 5. Return the original wrapper and let SelectAction detect and handle it
-             System.out.println("  > No specific custom dropdown pattern found. Returning wrapper for custom dropdown detection.");
+             logger.debug("No specific custom dropdown pattern found. Returning wrapper for custom dropdown detection");
          }
 
          return finalLocator;

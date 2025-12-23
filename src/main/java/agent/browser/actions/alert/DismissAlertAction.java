@@ -3,6 +3,7 @@ package agent.browser.actions.alert;
 import agent.browser.actions.BrowserAction;
 import agent.browser.SmartLocator;
 import agent.planner.ActionPlan;
+import agent.utils.LoggerUtil;
 import com.microsoft.playwright.Page;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -15,6 +16,8 @@ import java.util.concurrent.atomic.AtomicReference;
  * - confirm() - Clicks Cancel button
  */
 public class DismissAlertAction implements BrowserAction {
+    
+    private static final LoggerUtil logger = LoggerUtil.getLogger(DismissAlertAction.class);
     
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
@@ -30,19 +33,16 @@ public class DismissAlertAction implements BrowserAction {
                     
                     dialogMessage.set(message);
                     
-                    System.out.println("--------------------------------------------------");
-                    System.out.println(" 🔔 CONFIRM DIALOG DETECTED");
-                    System.out.println(" Type: " + type);
-                    System.out.println(" Message: " + message);
-                    System.out.println(" Action: DISMISSING (Cancel)");
-                    System.out.println("--------------------------------------------------");
+                    logger.alert(type, message);
+                    logger.info(" Action: DISMISSING (Cancel)");
+                    logger.info("--------------------------------------------------");
                     
                     // Dismiss the dialog (click Cancel)
                     dialog.dismiss();
                     dialogHandled.set(true);
                     
                 } catch (Exception e) {
-                    System.err.println("Error handling dialog: " + e.getMessage());
+                    logger.error("Error handling dialog: {}", e.getMessage());
                 }
             });
             
@@ -54,16 +54,15 @@ public class DismissAlertAction implements BrowserAction {
             }
             
             if (dialogHandled.get()) {
-                System.out.println("✅ Dialog dismissed successfully");
+                logger.success("Dialog dismissed successfully");
                 return true;
             } else {
-                System.err.println("❌ No confirm dialog appeared");
+                logger.warning("No confirm dialog appeared");
                 return true; // Don't fail if already handled
             }
             
         } catch (Exception e) {
-            System.err.println("Error in DismissAlertAction: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error in DismissAlertAction: {}", e.getMessage(), e);
             return false;
         }
     }
