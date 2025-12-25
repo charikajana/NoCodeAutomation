@@ -85,13 +85,25 @@ public class AllFeaturesTestRunner {
     private static boolean runFeature(String featurePath) {
         FeatureReader reader = new FeatureReader();
         SmartStepParser planner = new SmartStepParser();
-        BrowserService browserService = null;
+        
+        // Playwright resources
+        com.microsoft.playwright.Playwright playwright = null;
+        com.microsoft.playwright.Browser browser = null;
+        com.microsoft.playwright.Page page = null;
         
         try {
             List<String> steps = reader.readSteps(featurePath);
             
-            browserService = new BrowserService();
-            browserService.startBrowser();
+            // Initialize browser
+            playwright = com.microsoft.playwright.Playwright.create();
+            browser = playwright.chromium().launch(new com.microsoft.playwright.BrowserType.LaunchOptions().setHeadless(false));
+            page = browser.newPage();
+            page.setDefaultTimeout(120000);
+            page.setDefaultNavigationTimeout(120000);
+            
+            // Create services with Page instance
+            agent.browser.SmartLocator smartLocator = new agent.browser.SmartLocator(page);
+            BrowserService browserService = new BrowserService(page, smartLocator);
             
         int totalSteps = steps.size();
         int passed = 0;
@@ -106,7 +118,7 @@ public class AllFeaturesTestRunner {
                 continue;
             }
             
-            ActionPlan plan = planner.parseStep(step);
+            ActionPlan plan = planner.parseStep(step, page, smartLocator);
             logger.debug(plan.toString());
             
             // Check if this is a composite action plan
@@ -120,9 +132,9 @@ public class AllFeaturesTestRunner {
                 for (ActionPlan subAction : compositePlan.getSubActions()) {
                     logger.step("Sub-action {}/{}: {}", subIndex, compositePlan.getSubActionCount(), subAction.getActionType());
                     
-                    boolean subSuccess = browserService.executeAction(subAction);
+                    agent.reporting.StepExecutionReport subReport = browserService.executeAction(subAction);
                     
-                    if (subSuccess) {
+                    if ("PASSED".equals(subReport.getStatus())) {
                         logger.success("Sub-action {} succeeded", subIndex);
                     } else {
                         logger.failure("Sub-action {} failed", subIndex);
@@ -139,9 +151,9 @@ public class AllFeaturesTestRunner {
                     shouldContinue = false;
                 }
             } else {
-                boolean success = browserService.executeAction(plan);
+                agent.reporting.StepExecutionReport report = browserService.executeAction(plan);
                 
-                if (success) {
+                if ("PASSED".equals(report.getStatus())) {
                     passed++;
                 } else {
                     failed++;
@@ -163,11 +175,19 @@ public class AllFeaturesTestRunner {
             logger.error("Exception in feature execution: {}", e.getMessage(), e);
             return false;
         } finally {
-            if (browserService != null) {
+            // Close browser resources
+            if (browser != null) {
                 try {
-                    browserService.closeBrowser();
+                    browser.close();
                 } catch (Exception e) {
                     logger.error("Error closing browser: {}", e.getMessage());
+                }
+            }
+            if (playwright != null) {
+                try {
+                    playwright.close();
+                } catch (Exception e) {
+                    logger.error("Error closing playwright: {}", e.getMessage());
                 }
             }
         }

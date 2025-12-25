@@ -1,10 +1,12 @@
 package agent;
 
 import agent.browser.BrowserService;
+import agent.browser.SmartLocator;
 import agent.feature.FeatureReader;
 import agent.planner.ActionPlan;
 import agent.planner.SmartStepParser;
 import agent.utils.LoggerUtil;
+import com.microsoft.playwright.*;
 
 import java.util.List;
 
@@ -12,26 +14,34 @@ public class AgentApplication {
     
     private static final LoggerUtil logger = LoggerUtil.getLogger(AgentApplication.class);
     
+    // Playwright resources
+    private static Playwright playwright;
+    private static Browser browser;
+    private static Page page;
+    
     public static void main(String[] args) throws Exception {
         logger.info("Simple Test Agent started...");
 
-        FeatureReader reader = new FeatureReader();
-        SmartStepParser planner = new SmartStepParser();
-        BrowserService browserService = new BrowserService();
-
-        String featurePath = System.getProperty("featurePath", "src/main/resources/features/Frames.feature");
-        List<String> steps = reader.readSteps(featurePath);
-
-        browserService.startBrowser();
-
-        int totalSteps = steps.size();
-        int passed = 0;
-        int failed = 0;
-        int skipped = 0;
-
-        boolean shouldContinue = true;
+        // Initialize Playwright and Browser
+        initializeBrowser();
         
         try {
+            // Initialize services with the Page instance
+            FeatureReader reader = new FeatureReader();
+            SmartStepParser planner = new SmartStepParser();
+            SmartLocator smartLocator = new SmartLocator(page);
+            BrowserService browserService = new BrowserService(page, smartLocator);
+
+            String featurePath = "src/main/resources/features/DatePicker.feature";
+            List<String> steps = reader.readSteps(featurePath);
+
+            int totalSteps = steps.size();
+            int passed = 0;
+            int failed = 0;
+            int skipped = 0;
+
+            boolean shouldContinue = true;
+            
             for (String step : steps) {
                 if (!shouldContinue) {
                     skipped++;
@@ -39,7 +49,8 @@ public class AgentApplication {
                     continue;
                 }
                 
-                ActionPlan plan = planner.parseStep(step);
+                // Parse step with page context (enables intelligent semantic matching)
+                ActionPlan plan = planner.parseStep(step, page, smartLocator);
                 logger.debug(plan.toString());
                 
                 // Check if this is a composite action plan
@@ -55,9 +66,12 @@ public class AgentApplication {
                         logger.info("    Sub-action {}/{}: {}", 
                             subIndex, compositePlan.getSubActionCount(), subAction.getActionType());
                         
-                        boolean subSuccess = browserService.executeAction(subAction);
+                        agent.reporting.StepExecutionReport subReport = browserService.executeAction(subAction);
                         
-                        if (subSuccess) {
+                        // Log JSON report for sub-action
+                        logger.info("STEP EXECUTION REPORT:\n{}", subReport.toJson());
+                        
+                        if ("PASSED".equals(subReport.getStatus())) {
                             logger.success("    Sub-action {} succeeded", subIndex);
                         } else {
                             logger.failure("    Sub-action {} failed", subIndex);
@@ -77,9 +91,12 @@ public class AgentApplication {
                     }
                 } else {
                     // Regular single action
-                    boolean success = browserService.executeAction(plan);
+                    agent.reporting.StepExecutionReport report = browserService.executeAction(plan);
                     
-                    if (success) {
+                    // Log JSON report
+                    logger.info("STEP EXECUTION REPORT:\n{}", report.toJson());
+                    
+                    if ("PASSED".equals(report.getStatus())) {
                         passed++;
                     } else {
                         failed++;
@@ -89,12 +106,43 @@ public class AgentApplication {
                     }
                 }
             }
+            
+            logger.summary("EXECUTION SUMMARY", totalSteps, passed, failed, skipped);
+            
         } catch (Throwable e) {
             logger.error("Critical Error (Agent Crash): {}", e.getMessage(), e);
-            shouldContinue = false;
         } finally {
-            browserService.closeBrowser();
-            logger.summary("EXECUTION SUMMARY", totalSteps, passed, failed, skipped);
+            closeBrowser();
         }
+    }
+    
+    /**
+     * Initialize Playwright, Browser, and Page
+     */
+    private static void initializeBrowser() {
+        logger.info("Initializing browser...");
+        playwright = Playwright.create();
+        browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(false));
+        page = browser.newPage();
+        page.setDefaultTimeout(120000);
+        page.setDefaultNavigationTimeout(120000);
+        logger.success("Browser initialized successfully");
+    }
+    
+    /**
+     * Close Browser and Playwright resources
+     */
+    private static void closeBrowser() {
+        logger.info("Closing browser...");
+        if (browser != null) browser.close();
+        if (playwright != null) playwright.close();
+        logger.success("Browser closed successfully");
+    }
+    
+    /**
+     * Get the current Page instance (for external access if needed)
+     */
+    public static Page getPage() {
+        return page;
     }
 }

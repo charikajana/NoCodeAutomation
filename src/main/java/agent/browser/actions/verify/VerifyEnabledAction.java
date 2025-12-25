@@ -14,26 +14,62 @@ public class VerifyEnabledAction implements BrowserAction {
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
         String targetName = plan.getElementName();
-        Locator elEnabled = locator.waitForSmartElement(targetName, "radio", null, plan.getFrameAnchor());
+        Locator scope = null;
+
+        if (plan.getRowAnchor() != null) {
+            agent.browser.locator.table.TableNavigator navigator = new agent.browser.locator.table.TableNavigator();
+            if (plan instanceof agent.planner.EnhancedActionPlan) {
+                agent.planner.EnhancedActionPlan enhanced = (agent.planner.EnhancedActionPlan) plan;
+                String columnName = enhanced.getRowConditionColumn();
+                String columnValue = enhanced.getRowConditionValue();
+                if (columnName != null && columnValue != null) {
+                    scope = navigator.findRowByColumnValue(page, columnName, columnValue);
+                } else {
+                    scope = navigator.findRowByAnchor(page, plan.getRowAnchor());
+                }
+            } else {
+                scope = navigator.findRowByAnchor(page, plan.getRowAnchor());
+            }
+            if (scope == null) {
+                logger.failure("Row not found for anchor: {}", plan.getRowAnchor());
+                return false;
+            }
+        }
+
+        String actionType = plan.getActionType();
+        boolean expectEnabled = !"verify_disabled".equals(actionType);
+
+        Locator element = locator.waitForSmartElement(targetName, null, scope, plan.getFrameAnchor());
         
-        if (elEnabled != null) {
-            boolean isEnabled = elEnabled.isEnabled();
+        if (element != null) {
+            boolean isEnabled = element.isEnabled();
+            String tagName = (String) element.evaluate("el => el.tagName.toLowerCase()");
+            
             // If it's a label, check the linked input
-            if ("label".equals(elEnabled.evaluate("el => el.tagName.toLowerCase()"))) {
-                String forAttr = (String) elEnabled.getAttribute("for");
-                if (forAttr != null) {
+            if ("label".equals(tagName)) {
+                String forAttr = (String) element.getAttribute("for");
+                if (forAttr != null && !forAttr.isEmpty()) {
                      isEnabled = page.locator("#" + forAttr).isEnabled();
+                } else {
+                    // Try to find a nested input
+                    Locator nestedInput = element.locator("input");
+                    if (nestedInput.count() > 0) {
+                        isEnabled = nestedInput.first().isEnabled();
+                    }
                 }
             }
 
-            if (isEnabled) {
+            if (isEnabled == expectEnabled) {
                 logger.section("VALIDATION SUCCESS");
-                logger.info(" Element '{}' matches expected state: ENABLED", targetName);
+                logger.info(" Element '{}' matches expected state: {}", targetName, expectEnabled ? "ENABLED" : "DISABLED");
                 logger.info("--------------------------------------------------");
                 return true;
             } else {
                 logger.section("VALIDATION FAILED");
-                logger.error(" Element '{}' is DISABLED", targetName);
+                logger.error(" Element '{}' state mismatch. Expected: {}, Actual: {}", 
+                    targetName, 
+                    expectEnabled ? "ENABLED" : "DISABLED",
+                    isEnabled ? "ENABLED" : "DISABLED");
                 logger.info("--------------------------------------------------");
                 return false;
             }

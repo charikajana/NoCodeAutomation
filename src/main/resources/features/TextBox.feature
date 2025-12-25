@@ -1,7 +1,7 @@
 Feature: Robot Demo
   Scenario: Navigate to DemoQA and Click Elements
     Given Open the browser and go to "https://demoqa.com/"
-    When Click "Elements" tab
+    When Click Elements tab
     And click on Text box
     And Enter Full Name "chari"
     And Enter Email "abce@gmail.com"

@@ -14,10 +14,10 @@ public class SmartLocator {
     
     private static final LoggerUtil logger = LoggerUtil.getLogger(SmartLocator.class);
     
-    private final Page page;
+    private Page page;
     private final DomScanner docScanner;
     private final CandidateScorer scorer;
-    private final LocatorFactory locatorFactory;
+    private LocatorFactory locatorFactory;
 
     public SmartLocator(Page page) {
         this.page = page;
@@ -34,18 +34,22 @@ public class SmartLocator {
         return waitForSmartElement(name, type, scope, null);
     }
 
+    public Locator waitForSmartElement(String name, String type, Locator scope, String frameAnchor) {
+        return waitForSmartElement(name, type, scope, frameAnchor, false);
+    }
+
     /**
      * Wait for an element to appear, with optional scope and frame anchor
      */
-    public Locator waitForSmartElement(String name, String type, Locator scope, String frameAnchor) {
+    public Locator waitForSmartElement(String name, String type, Locator scope, String frameAnchor, boolean includeHidden) {
         long deadline = System.currentTimeMillis() + 30000; 
         int maxRetries = 60; 
         int retryCount = 0;
         long lastLogTime = 0;
         
         while (System.currentTimeMillis() < deadline && retryCount < maxRetries) {
-            Locator loc = findSmartElement(name, type, scope, frameAnchor);
-            if (loc != null && loc.isVisible()) {
+            Locator loc = findSmartElement(name, type, scope, frameAnchor, includeHidden);
+            if (loc != null && (includeHidden || loc.isVisible())) {
                 return loc;
             }
             
@@ -87,32 +91,87 @@ public class SmartLocator {
     }
 
     public Locator findSmartElement(String name, String parsedType, Locator scope, String frameAnchor) {
+        return findSmartElement(name, parsedType, scope, frameAnchor, false);
+    }
+
+    public Locator findSmartElement(String name, String parsedType, Locator scope, String frameAnchor, boolean includeHidden) {
         if (name == null) return null;
 
+        // INTELLIGENT TYPE EXTRACTION
+        // Extract element type descriptor from user's natural language
+        // E.g., "Home link" -> name="Home", type="link"
+        //       "Submit button" -> name="Submit", type="button"
+        //       "Username input field" -> name="Username", type="input"
+        // Note: "box" is NOT a descriptor because it's part of names like "Text Box", "Search Box"
+        String cleanName = name.trim();
+        String detectedType = parsedType; // Start with passed type
+        
+        // Check if user provided a type descriptor at the end
+        // Note: We exclude "box" since it's commonly part of element names (Text Box, Search Box, etc.)
+        if (cleanName.matches("(?i).*\\s+(link|button|icon|checkbox|check box|radio|element|field|input|dropdown|drop down|select|textarea|text area|slider|range|progress bar|progressbar)$")) {
+            // Extract the type descriptor
+            String[] parts = cleanName.split("\\s+");
+            // Handle multi-word hints like "progress bar"
+            String typeHint;
+            if (cleanName.toLowerCase().endsWith("progress bar")) {
+                typeHint = "progressbar";
+            } else {
+                typeHint = parts[parts.length - 1].toLowerCase();
+            }
+            
+            // Map natural language to element types for DOM scanning
+            String mappedType = switch (typeHint) {
+                case "link" -> "link";
+                case "button" -> "button";
+                case "checkbox", "check box" -> "checkbox";
+                case "radio" -> "radio";
+                case "input", "field" -> "input";
+                case "dropdown", "drop down", "select" -> "select";
+                case "textarea", "text area" -> "textarea";
+                case "slider", "range" -> "slider";
+                case "progressbar", "progress bar" -> "progressbar";
+                default -> parsedType; // Use original if no match
+            };
+            
+            // Only override if we detected a valid type
+            if (!mappedType.equals(parsedType)) {
+                logger.debug("Detected element type hint: '{}' -> type='{}'", typeHint, mappedType);
+                detectedType = mappedType;
+            }
+            
+            // Extract clean name without the type descriptor
+            cleanName = cleanName.replaceAll("(?i)\\s+(link|button|icon|checkbox|radio|element|field|input|dropdown|select|textarea|slider|range|progress bar|progressbar)$", "").trim();
+        }
+        
+        // Use the clean name and detected type for searching
+        final String searchName = cleanName;
+        final String searchType = detectedType;
+        
         // 1. If frame anchor is provided, narrow search to that frame
         if (frameAnchor != null) {
             Frame frame = findFrame(frameAnchor);
             if (frame != null) {
                 logger.debug("Scoping search to iframe: '{}'", frameAnchor);
-                return findInContext(name, parsedType, frame, null);
+                return findInContext(searchName, searchType, frame, null, includeHidden);
             } else {
                 logger.warning("Target iframe '{}' not found. Searching globally...", frameAnchor);
             }
         }
 
         // 2. Normal search (Scoped or Page)
-        Locator loc = findInContext(name, parsedType, null, scope);
+        Locator loc = findInContext(searchName, searchType, null, scope, includeHidden);
         if (loc != null) return loc;
 
         // 3. Automatic Frame Traversal: If not found in main page, search all frames
         if (scope == null) {
-            logger.debug("Element '{}' not found in main page. Searching across all iframes...", name);
+            logger.debug("Element '{}' not found in main page. Searching across all iframes...", searchName);
             for (Frame frame : page.frames()) {
                 if (frame == page.mainFrame()) continue; // Already searched
+                if (frame.isDetached()) continue;
                 
-                loc = findInContext(name, parsedType, frame, null);
+                loc = findInContext(searchName, searchType, frame, null, includeHidden);
                 if (loc != null) {
-                    logger.success("Found element '{}' inside iframe: '{}'", name, frame.name().isEmpty() ? frame.url() : frame.name());
+                    logger.success("Found element '{}' inside iframe: '{}'", searchName, frame.name().isEmpty() ? frame.url() : frame.name());
                     return loc;
                 }
             }
@@ -130,28 +189,30 @@ public class SmartLocator {
             
             // Check ID or other attributes via evaluation if name doesn't match
             try {
+                if (frame.isDetached()) continue;
                 String frameId = (String) frame.evaluate("() => window.frameElement ? window.frameElement.id : ''");
                 if (frameAnchor.equalsIgnoreCase(frameId)) return frame;
                 
+                if (frame.isDetached()) continue;
                 String frameTitle = (String) frame.evaluate("() => window.frameElement ? window.frameElement.title : ''");
                 if (frameAnchor.equalsIgnoreCase(frameTitle)) return frame;
             } catch (Exception e) {
-                // Ignore errors in cross-origin frames
+                // Ignore errors in detached or cross-origin frames
             }
         }
         return null;
     }
 
-    private Locator findInContext(String name, String parsedType, Frame frame, Locator scope) {
-        logger.analysis("Analyzing DOM context for target: '{}' (Type: {}){}", name, parsedType, (frame != null ? " [Frame]" : (scope != null ? " [Scoped]" : " [Page]")));
+    private Locator findInContext(String name, String parsedType, Frame frame, Locator scope, boolean includeHidden) {
+        logger.analysis("Analyzing DOM context for target: '{}' (Type: {}){}{}", name, parsedType, (frame != null ? " [Frame]" : (scope != null ? " [Scoped]" : " [Page]")), (includeHidden ? " [Include Hidden]" : ""));
 
         List<ElementCandidate> elements;
         if (scope != null) {
-            elements = docScanner.scan(scope);
+            elements = docScanner.scan(scope, includeHidden);
         } else if (frame != null) {
-            elements = docScanner.scan(frame);
+            elements = docScanner.scan(frame, includeHidden);
         } else {
-            elements = docScanner.scan(page);
+            elements = docScanner.scan(page, includeHidden);
         }
 
         double bestScore = 0.0;
@@ -207,5 +268,17 @@ public class SmartLocator {
         }
         
         return locatorFactory.createLocator(element, score, parsedType, scope);
+    }
+    /**
+     * Updates the page instance used by the locator.
+     * This is essential when switching between windows/tabs.
+     */
+    public void setPage(Page newPage) {
+        if (this.page != newPage) {
+            logger.debug("SmartLocator switching to new page context");
+            this.page = newPage;
+            // Re-initialize factory with new page
+            this.locatorFactory = new LocatorFactory(newPage);
+        }
     }
 }

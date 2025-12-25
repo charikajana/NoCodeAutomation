@@ -33,8 +33,18 @@ public class LocatorFactory {
          // Safer to use scope.locator("#id") if strict.
          
          if (foundId != null && !foundId.isEmpty()) {
-             finalLocator = (scope != null) ? scope.locator("#" + foundId) : page.locator("#" + foundId);
+             // Use tag + id and filter by text to disambiguate if IDs are reused (common in DemoQA)
+             Locator base = (scope != null) ? scope.locator(foundTag + "#" + foundId) : page.locator(foundTag + "#" + foundId);
+             if (foundText != null && !foundText.isEmpty() && foundText.length() < 100 && !"progressbar".equals(parsedType)) {
+                 finalLocator = base.filter(new Locator.FilterOptions().setHasText(foundText)).first();
+             } else {
+                 finalLocator = base.first();
+             }
          } 
+         else if ("progressbar".equals(parsedType) || "progressbar".equals(element.role)) {
+             // Priority for progress bars: Role or Tag, NOT text (which changes constantly)
+             finalLocator = (scope != null) ? scope.locator("[role='progressbar']").first() : page.locator("[role='progressbar']").first();
+         }
          else if (foundText != null && !foundText.isEmpty() && foundText.length() < 100) {
              if (score >= 150) {
                  if (scope != null) {
@@ -63,7 +73,68 @@ public class LocatorFactory {
 
          boolean isFill = "input".equals(parsedType);
          boolean isSelect = "select".equals(parsedType);
+         boolean isSlider = "slider".equals(parsedType);
 
+         // Refine for SLIDER actions if we matched a label or wrapper
+         if (isSlider && !"input".equals(foundTag)) {
+             // 1. If label with 'for', use that
+             if ("label".equals(foundTag) && foundFor != null && !foundFor.isEmpty()) {
+                 logger.debug("Refining label match to linked slider #{}", foundFor);
+                 return page.locator("#" + foundFor);
+             }
+             // 2. Look for nested slider
+             Locator nested = finalLocator.locator("input[type='range'], [role='slider']").first();
+             if (nested.count() > 0) {
+                 logger.debug("Refining wrapper match to nested slider");
+                 return nested;
+             }
+             
+             // 3. Look for sibling slider (via parent)
+             Locator parent = finalLocator.locator("xpath=..");
+             Locator sibling = parent.locator("input[type='range'], [role='slider']").first();
+             if (sibling.count() > 0) {
+                 logger.debug("Refining match to sibling slider");
+                 return sibling;
+             }
+
+             // 4. Look for parent's next sibling's nested slider (common in form layouts)
+             Locator parentNextSibling = parent.locator("xpath=following-sibling::*[1]").first();
+             if (parentNextSibling.count() > 0) {
+                 Locator nestedInSibling = parentNextSibling.locator("input[type='range'], [role='slider']").first();
+                 if (nestedInSibling.count() > 0) {
+                     logger.debug("Found slider in next sibling of label container, refining to it");
+                     return nestedInSibling;
+                 }
+             }
+             
+             // 5. Look for cousin slider (via grandparent)
+             Locator grandParent = finalLocator.locator("xpath=../..");
+             Locator cousin = grandParent.locator("input[type='range'], [role='slider']").first();
+             if (cousin.count() > 0) {
+                 logger.debug("Refining match to cousin slider");
+                 return cousin;
+             }
+         }
+
+         // Refine for PROGRESSBAR actions if we matched a container
+         if ("progressbar".equals(parsedType)) {
+             String role = element.role != null ? element.role.toLowerCase() : "";
+             if (!"progressbar".equals(role)) {
+                 // Look for nested progress bar
+                 Locator nested = finalLocator.locator("[role='progressbar']").first();
+                 if (nested.count() > 0) {
+                     logger.debug("Refining container match to nested progress bar");
+                     return nested;
+                 }
+                 // Look for sibling
+                 Locator sibling = finalLocator.locator("xpath=..").locator("[role='progressbar']").first();
+                 if (sibling.count() > 0) {
+                     logger.debug("Refining match to sibling progress bar");
+                     return sibling;
+                 }
+             }
+         }
+         
          // Refine for FILL actions if we matched a non-input wrapper
          if (isFill && !"input".equals(foundTag) && !"textarea".equals(foundTag)) {
              // 1. If label with 'for', use that

@@ -158,24 +158,14 @@ public class MultiselectAction implements BrowserAction {
      */
     private boolean isItemSelected(Locator item) {
         try {
-            String className = item.getAttribute("class");
-            if (className != null) {
-                return className.contains("active") || 
-                       className.contains("selected") || 
-                       className.contains("is-selected");
-            }
-            
-            // Check ARIA attribute
-            String ariaSelected = item.getAttribute("aria-selected");
-            if ("true".equals(ariaSelected)) {
-                return true;
-            }
-            
+            return (boolean) item.evaluate("(el) => {" +
+                    "  const cl = (el.className || '').toLowerCase().split(/\\s+/);" +
+                    "  return cl.includes('active') || cl.includes('selected') || el.getAttribute('aria-selected') === 'true';" +
+                    "}");
         } catch (Exception e) {
             logger.debug("Could not verify selection state: {}", e.getMessage());
+            return false;
         }
-        
-        return false;
     }
     
     /**

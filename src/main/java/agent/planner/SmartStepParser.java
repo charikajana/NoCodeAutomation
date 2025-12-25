@@ -1,27 +1,120 @@
 package agent.planner;
 
+import agent.intelligence.IntelligentStepProcessor;
 import agent.utils.LoggerUtil;
+import com.microsoft.playwright.Page;
+
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Smart Step Parser that handles 100+ table step variations using:
- * 1. Rule-based regex patterns (fast path)
- * 2. Intent classification (medium path) 
- * 3. Optional LLM fallback (future)
+ * Smart Step Parser with INTELLIGENCE LAYER (Phase 4).
+ * 
+ * Parsing strategies (in order):
+ * 0. Intelligent NLP-based processing (NEW - Phase 4)
+ * 1. Combined action detection
+ * 2. Frame-scoped actions
+ * 3. Table-specific patterns
+ * 4. Legacy regex patterns
+ * 5. Fuzzy intent classification
+ * 6. LLM fallback (future)
  */
 public class SmartStepParser {
     
     private static final LoggerUtil logger = LoggerUtil.getLogger(SmartStepParser.class);
     
+    private final IntelligentStepProcessor intelligentProcessor;  // Phase 4: Intelligence
     private final StepPlanner legacyPlanner;
     private final Map<String, List<TableStepPattern>> tablePatterns;
     
+    // Configuration flag to enable/disable intelligence
+    private boolean intelligenceEnabled = true;
+    
     public SmartStepParser() {
+        this.intelligentProcessor = new IntelligentStepProcessor();
         this.legacyPlanner = new StepPlanner();
         this.tablePatterns = new HashMap<>();
         initializeTablePatterns();
+    }
+    
+    /**
+     * Enable or disable intelligence layer
+     */
+    public void setIntelligenceEnabled(boolean enabled) {
+        this.intelligenceEnabled = enabled;
+        logger.info("Intelligence Layer: {}", enabled ? "ENABLED" : "DISABLED");
+    }
+    
+    /**
+     * Check if a step is supported by the framework (matches any pattern)
+     * WITHOUT executing it. Useful for BDD integration to decide between
+     * smart automation vs custom logic.
+     * 
+     * @param step Natural language step
+     * @return true if framework can handle this step, false otherwise
+     * 
+     * Example:
+     *   if (parser.isStepSupported("When I click Submit")) {
+     *       // Use framework
+     *   } else {
+     *       // Use custom code
+     *   }
+     */
+    public boolean isStepSupported(String step) {
+        if (step == null || step.trim().isEmpty()) {
+            return false;
+        }
+        
+        String normalizedStep = step.trim();
+        
+        try {
+            // Try intelligence layer first
+            if (intelligenceEnabled) {
+                logger.debug("Checking step support via Intelligence Layer: {}", normalizedStep);
+                // Intelligence layer can handle almost any natural language
+                // Check if it can extract a valid intent
+                if (intelligentProcessor.canProcess(normalizedStep)) {
+                    logger.debug("✓ Step supported by Intelligence Layer");
+                    return true;
+                }
+            }
+            
+            // Check legacy patterns
+            logger.debug("Checking step support via Legacy Patterns: {}", normalizedStep);
+            
+            // Check combined actions
+            if (PatternRegistry.getCombinedActions().stream()
+                    .anyMatch(pattern -> pattern.matcher(normalizedStep).matches())) {
+                logger.debug("✓ Step supported by Combined Actions");
+                return true;
+            }
+            
+            // Check table patterns
+            for (List<TableStepPattern> patterns : tablePatterns.values()) {
+                for (TableStepPattern pattern : patterns) {
+                    if (pattern.getPattern().matcher(normalizedStep).matches()) {
+                        logger.debug("✓ Step supported by Table Patterns");
+                        return true;
+                    }
+                }
+            }
+            
+            // Check all registered patterns
+            for (Map.Entry<String, Pattern> entry : PatternRegistry.getAllPatterns().entrySet()) {
+                if (entry.getValue().matcher(normalizedStep).matches()) {
+                    logger.debug("✓ Step supported by Pattern: {}", entry.getKey());
+                    return true;
+                }
+            }
+            
+            logger.debug("✗ Step NOT supported by framework patterns");
+            return false;
+            
+        } catch (Exception e) {
+            logger.warn("Error checking step support: {}", e.getMessage());
+            return false;
+        }
     }
     
     private void initializeTablePatterns() {
@@ -35,43 +128,79 @@ public class SmartStepParser {
     
     /**
      * Main parsing method - tries multiple strategies
+     * 
+     * @param step The natural language step to parse
+     * @return ActionPlan ready for execution
      */
     public ActionPlan parseStep(String step) {
-        // STRATEGY 0: Check if this is a combined action step (contains multiple actions)
+        return parseStep(step, null, null);
+    }
+    
+    /**
+     * Parse step with optional page context for intelligent processing
+     * 
+     * @param step The natural language step
+     * @param page Optional page context (enables semantic matching)
+     * @param smartLocator Optional smart locator (for fallback)
+     * @return ActionPlan ready for execution
+     */
+    public ActionPlan parseStep(String step, Page page, agent.browser.SmartLocator smartLocator) {
+        logger.section("PARSING STEP");
+        logger.info("Step: {}", step);
+        
+        // STRATEGY 0: INTELLIGENT NLP-BASED PROCESSING (Phase 4)
+        if (intelligenceEnabled) {
+            logger.debug("→ Trying: Intelligent NLP Processing");
+            ActionPlan intelligentPlan = intelligentProcessor.processStep(step, page, smartLocator);
+            
+            if (intelligentPlan != null && intelligentPlan.isValid()) {
+                logger.success("✓ Parsed via: INTELLIGENCE LAYER");
+                return intelligentPlan;
+            }
+            logger.debug("  ✗ Intelligence layer did not match");
+        }
+        
+        // STRATEGY 1: Check if this is a combined action step (contains multiple actions)
         if (isCombinedAction(step)) {
+            logger.debug("→ Trying: Combined Action Detection");
             logger.info("Detected Combined Action Step");
             return parseCombinedActions(step);
         }
 
-        // STRATEGY 1: Check for frame-scoped actions ("In iframe 'x', click 'y'")
+        // STRATEGY 2: Check for frame-scoped actions ("In iframe 'x', click 'y'")
+        logger.debug("→ Trying: Frame-Scoped Actions");
         ActionPlan frameScopedPlan = tryFrameScoping(step);
         if (frameScopedPlan != null) {
+            logger.success("✓ Parsed via: FRAME-SCOPED PATTERN");
             return frameScopedPlan;
         }
         
-        // STRATEGY 2: Try table-specific patterns first (new features)
+        // STRATEGY 3: Try table-specific patterns first (new features)
+        logger.debug("→ Trying: Table-Specific Patterns");
         ActionPlan tablePlan = tryTablePatterns(step);
         if (tablePlan != null) {
-            logger.success("Matched via Table/Frame Pattern: {}", tablePlan.getActionType());
+            logger.success("✓ Parsed via: TABLE PATTERN ({})", tablePlan.getActionType());
             return tablePlan;
         }
         
-        // STRATEGY 3: Fall back to legacy patterns (existing features)
+        // STRATEGY 4: Fall back to legacy patterns (existing features)
+        logger.debug("→ Trying: Legacy Regex Patterns");
         ActionPlan legacyPlan = legacyPlanner.plan(step);
         if (legacyPlan != null && !"unknown".equals(legacyPlan.getActionType())) {
-            logger.success("Matched via Legacy Pattern: {}", legacyPlan.getActionType());
+            logger.success("✓ Parsed via: LEGACY PATTERN ({})", legacyPlan.getActionType());
             return legacyPlan;
         }
         
-        // STRATEGY 4: Try intent-based fuzzy matching
+        // STRATEGY 5: Try intent-based fuzzy matching
+        logger.debug("→ Trying: Fuzzy Intent Classification");
         ActionPlan fuzzyPlan = tryIntentClassification(step);
         if (fuzzyPlan != null) {
-            logger.warning("Matched via Fuzzy Intent: {}", fuzzyPlan.getActionType());
+            logger.warning("✓ Parsed via: FUZZY INTENT ({})", fuzzyPlan.getActionType());
             return fuzzyPlan;
         }
         
-        // STRATEGY 5: LLM Fallback (future - would call OpenAI API here)
-        logger.error("Could not parse step: {}", step);
+        // STRATEGY 6: LLM Fallback (future - would call OpenAI API here)
+        logger.error("✗ Could not parse step: {}", step);
         return createUnknownPlan(step);
     }
     
@@ -296,10 +425,8 @@ public class SmartStepParser {
             }
         }
         
-        // Special handling for click_in_row and click_specific_in_row actions
-        // Set rowAnchor to enable row-scoped element finding
-        if (("click_in_row".equals(actionType) || "click_specific_in_row".equals(actionType)) 
-            && plan.getRowConditionValue() != null) {
+        // Set rowAnchor to enable row-scoped element finding if we have a row condition
+        if (plan.getRowConditionValue() != null) {
             plan.setRowAnchor(plan.getRowConditionValue());
             logger.debug("Setting rowAnchor: {}", plan.getRowConditionValue());
         }
@@ -327,7 +454,7 @@ public class SmartStepParser {
                 plan.setIsBulkAction(true);
                 plan.setBulkActionType(value);
             }
-            case "buttonName", "frameName" -> plan.setElementName(value);
+            case "buttonName", "frameName", "elementName" -> plan.setElementName(value);
             case "searchValue" -> plan.setValue(value);
         }
     }
@@ -385,6 +512,10 @@ public class SmartStepParser {
         TableStepPattern(Pattern regex, Map<String, Object> groupMapping) {
             this.regex = regex;
             this.groupMapping = groupMapping;
+        }
+        
+        public Pattern getPattern() {
+            return regex;
         }
     }
 }

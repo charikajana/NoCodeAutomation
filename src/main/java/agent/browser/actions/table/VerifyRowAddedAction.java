@@ -35,6 +35,9 @@ public class VerifyRowAddedAction implements BrowserAction {
         logger.info("Verifying row exists with '{}' in '{}' column", expectedValue, columnName);
         
         try {
+            // Wait 100ms for form submission to complete and row to be added
+            Thread.sleep(200);
+            
             // Strategy 1: Try to find table rows
             Locator tableRows = page.locator("table").locator("tbody tr");
             int rowCount = tableRows.count();

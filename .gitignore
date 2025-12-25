@@ -14,10 +14,11 @@ target/
 *.ipr
 .idea
 .playwright-mcp
-docs/
 logs/
 *.log
 .agent
+!.agent/workflows/
+!logs/
 
 ### Eclipse ###
 .apt_generated
