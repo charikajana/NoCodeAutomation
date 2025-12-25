@@ -15,7 +15,7 @@ public class CandidateScorer {
         do {
             changed = false;
             String before = cleanName;
-            cleanName = cleanName.replaceAll("\\s+(button|btn|link|input|field|tab|icon|radio|checkbox|dropdown|select|box|menu)$", "").trim();
+            cleanName = cleanName.replaceAll("\\s+(button|btn|link|input|field|tab|icon|radio|checkbox|dropdown|select|box|menu|card|item|element|option|header|title|label)$", "").trim();
             if (!before.equals(cleanName)) changed = true;
         } while (changed);
 

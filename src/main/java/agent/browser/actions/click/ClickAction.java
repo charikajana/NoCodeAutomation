@@ -15,12 +15,21 @@ public class ClickAction implements BrowserAction {
     @Override
     public boolean execute(Page page, SmartLocator locator, ActionPlan plan) {
         String targetName = plan.getElementName();
-        Locator scope = null;
+        
+        // 1. Try to use intelligent locator if already found during planning
+        if (plan.hasMetadata("intelligent_locator")) {
+            Locator intelligentLocator = (Locator) plan.getMetadataValue("intelligent_locator");
+            if (intelligentLocator != null) {
+                logger.debug("Using pre-resolved intelligent locator for: {}", targetName);
+                return performClick(intelligentLocator, targetName);
+            }
+        }
 
+        // 2. Handle row-based scope
+        Locator scope = null;
         if (plan.getRowAnchor() != null) {
              TableNavigator navigator = new TableNavigator();
              
-             // Prefer column-based XPath if we have EnhancedActionPlan with column info
              if (plan instanceof agent.planner.EnhancedActionPlan) {
                  agent.planner.EnhancedActionPlan enhanced = (agent.planner.EnhancedActionPlan) plan;
                  String columnName = enhanced.getRowConditionColumn();
@@ -41,28 +50,43 @@ public class ClickAction implements BrowserAction {
               }
          }
         
+        // 3. Find element using SmartLocator
         Locator clickable = locator.waitForSmartElement(targetName, "button", scope, plan.getFrameAnchor());
         
         if (clickable != null) {
-            try {
-                String tagName = (String) clickable.evaluate("el => el.tagName.toLowerCase()");
-                String type = (String) clickable.evaluate("el => el.type");
-
-                if ("input".equals(tagName) && ("radio".equals(type) || "checkbox".equals(type))) {
-                        logger.debug("Target is input[type={}], using force click", type);
-                        clickable.click(new Locator.ClickOptions().setForce(true));
-                } else {
-                        clickable.click();
-                }
-            } catch (Exception e) {
-                logger.debug("Standard click failed, trying force click");
-                clickable.click(new Locator.ClickOptions().setForce(true));
-            }
-            logger.browserAction("Click", targetName);
-            return true;
+            return performClick(clickable, targetName);
         } else {
             logger.failure("Element not found for clicking: {}", targetName);
             return false;
+        }
+    }
+
+    /**
+     * Internal helper to perform the click with robust fallback
+     */
+    private boolean performClick(Locator clickable, String targetName) {
+        try {
+            String tagName = (String) clickable.evaluate("el => el.tagName.toLowerCase()");
+            String type = (String) clickable.evaluate("el => el.type");
+
+            if ("input".equals(tagName) && ("radio".equals(type) || "checkbox".equals(type))) {
+                logger.debug("Target is input[type={}], using force click", type);
+                clickable.click(new Locator.ClickOptions().setForce(true));
+            } else {
+                clickable.click();
+            }
+            logger.browserAction("Click", targetName);
+            return true;
+        } catch (Exception e) {
+            try {
+                logger.debug("Standard click failed, trying force click: {}", e.getMessage());
+                clickable.click(new Locator.ClickOptions().setForce(true));
+                logger.browserAction("Force Click", targetName);
+                return true;
+            } catch (Exception e2) {
+                logger.failure("Failed to click element: {}. Error: {}", targetName, e2.getMessage());
+                return false;
+            }
         }
     }
 }

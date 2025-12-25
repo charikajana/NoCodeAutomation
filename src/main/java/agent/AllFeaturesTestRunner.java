@@ -120,9 +120,9 @@ public class AllFeaturesTestRunner {
                 for (ActionPlan subAction : compositePlan.getSubActions()) {
                     logger.step("Sub-action {}/{}: {}", subIndex, compositePlan.getSubActionCount(), subAction.getActionType());
                     
-                    boolean subSuccess = browserService.executeAction(subAction);
+                    agent.reporting.StepExecutionReport subReport = browserService.executeAction(subAction);
                     
-                    if (subSuccess) {
+                    if ("PASSED".equals(subReport.getStatus())) {
                         logger.success("Sub-action {} succeeded", subIndex);
                     } else {
                         logger.failure("Sub-action {} failed", subIndex);
@@ -139,9 +139,9 @@ public class AllFeaturesTestRunner {
                     shouldContinue = false;
                 }
             } else {
-                boolean success = browserService.executeAction(plan);
+                agent.reporting.StepExecutionReport report = browserService.executeAction(plan);
                 
-                if (success) {
+                if ("PASSED".equals(report.getStatus())) {
                     passed++;
                 } else {
                     failed++;

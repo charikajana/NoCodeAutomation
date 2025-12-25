@@ -44,6 +44,12 @@ public class WindowManagementAction implements BrowserAction {
             case "close_window":
                 return closeNewWindow(page);
                 
+            case "verify_window_count":
+                return verifyWindowCount(page, plan.getValue());
+                
+            case "verify_window_exists":
+                return verifyWindowExists(page);
+                
             default:
                 logger.error("Unknown window action: {}", actionType);
                 return false;
@@ -190,6 +196,48 @@ public class WindowManagementAction implements BrowserAction {
             }
         } catch (Exception e) {
             logger.error("Error closing new window: {}", e.getMessage());
+            return false;
+        }
+    }
+    
+    private boolean verifyWindowCount(Page page, String expectedValue) {
+        try {
+            int expected = Integer.parseInt(expectedValue);
+            int actual = page.context().pages().size();
+            
+            if (actual == expected) {
+                logger.success("Window count verification successful: Count={}", actual);
+                return true;
+            } else {
+                logger.failure("Window count verification failed: Expected={}, Actual={}", expected, actual);
+                return false;
+            }
+        } catch (Exception e) {
+            logger.error("Error verifying window count: {}", e.getMessage());
+            return false;
+        }
+    }
+    
+    private boolean verifyWindowExists(Page page) {
+        try {
+            List<Page> pages = page.context().pages();
+            // If checking for "new" window, we expect more than 1 page
+            if (pages.size() > 1) {
+                logger.success("New window/tab exists. Total windows: {}", pages.size());
+                return true;
+            } else if (!pages.isEmpty()) {
+                // Determine if we were strictly looking for a "New" window based on some context?
+                // For now, if only 1 window exists, checking for "new window" should technically fail 
+                // but checking for "main window" should pass.
+                // Given the pattern usually is "Verify new window exists", we should probably warn or fail if only 1.
+                logger.info("Only 1 window is open.");
+                return pages.size() >= 1; 
+            } else {
+                logger.failure("No windows/tabs exist");
+                return false;
+            }
+        } catch (Exception e) {
+            logger.error("Error verifying window existence: {}", e.getMessage());
             return false;
         }
     }

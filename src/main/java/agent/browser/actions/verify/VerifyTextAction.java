@@ -140,6 +140,12 @@ public class VerifyTextAction implements BrowserAction {
                 logger.info(" Found in Element: {}", foundText);
                 logger.info(" Match Strategy: {}", matchType + (visible ? "" : " (Hidden/Value)"));
                 logger.info("--------------------------------------------------");
+                
+                // Phase 3: Auto-store booking references to context
+                if (isBookingReference(foundText)) {
+                    storeBookingReference(foundText);
+                }
+                
                 return true;
             }
         }
@@ -203,6 +209,40 @@ public class VerifyTextAction implements BrowserAction {
             return "[No text found]";
         } catch (Exception e) {
             return "[Error reading text]";
+        }
+    }
+    
+    /**
+     * Check if text matches booking reference pattern
+     */
+    private boolean isBookingReference(String text) {
+        if (text == null || text.isEmpty()) {
+            return false;
+        }
+        
+        // Common booking reference patterns:
+        // - All caps with numbers (e.g., "ABC123", "BOOK456")
+        // - Starts with letters and contains numbers
+        // - Length between 5-15 characters
+        String upperText = text.toUpperCase();
+        
+        return (text.matches("^[A-Z0-9]{5,15}$") ||  // All caps/numbers
+                text.matches("^[A-Z]{2,5}[0-9]{3,10}$") ||  // Letter prefix + numbers
+                upperText.contains("BOOKING") ||
+                upperText.contains("REFERENCE") ||
+                upperText.contains("CONFIRMATION"));
+    }
+    
+    /**
+     * Store booking reference to TestContext
+     */
+    private void storeBookingReference(String reference) {
+        try {
+            agent.context.TestContext context = agent.context.TestContext.getInstance();
+            context.setBookingReference("hotel", reference);
+            logger.info("Auto-stored booking reference: {}", reference);
+        } catch (Exception e) {
+            logger.debug("Could not store booking reference: {}", e.getMessage());
         }
     }
 }

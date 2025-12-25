@@ -14,6 +14,8 @@ import agent.browser.actions.alert.*;
 import agent.browser.actions.frame.*;
 import agent.browser.actions.modal.*;
 import agent.browser.actions.list.*;
+import agent.browser.actions.keyboard.*;
+import agent.browser.actions.scroll.ScrollAction;
 import agent.utils.LoggerUtil;
 import com.microsoft.playwright.*;
 import java.util.HashMap;
@@ -31,68 +33,9 @@ public class BrowserService {
     private String currentFrameAnchor = null;
 
     public BrowserService() {
-        actionHandlers = new HashMap<>();
-        actionHandlers.put("navigate", new NavigateAction());
-        actionHandlers.put("fill", new FillAction());
-        actionHandlers.put("click", new ClickAction());
-        actionHandlers.put("double_click", new DoubleClickAction());
-        actionHandlers.put("right_click", new RightClickAction());
-        actionHandlers.put("select", new SelectAction());
-        actionHandlers.put("deselect", new DeselectAction());
-        actionHandlers.put("check", new CheckAction());
-        actionHandlers.put("uncheck", new UncheckAction());
-        actionHandlers.put("verify", new VerifyTextAction());
-        actionHandlers.put("verify_not", new VerifyNotTextAction());
-        actionHandlers.put("verify_enabled", new VerifyEnabledAction());
-        actionHandlers.put("verify_disabled", new VerifyDisabledAction());
-        actionHandlers.put("screenshot", new ScreenshotAction());
-        
-        // Wait actions - all variations
-        actionHandlers.put("wait", new WaitAction());
-        actionHandlers.put("wait_time", new WaitAction());
-        actionHandlers.put("wait_page", new WaitAction());
-        actionHandlers.put("wait_appear", new WaitAction());
-        actionHandlers.put("wait_disappear", new WaitAction());
-        
-        // Table actions
-        actionHandlers.put("row_added_with_value", new VerifyRowAddedAction());
-        actionHandlers.put("get_row_values", new GetRowValuesAction());
-        actionHandlers.put("click_in_row", new ClickAction());
-        actionHandlers.put("click_specific_in_row", new ClickAction());
-        actionHandlers.put("verify_row_not_exists", new VerifyRowNotExistsAction());
-        
-        // Browser lifecycle
-        actionHandlers.put("close_browser", new CloseBrowserAction());
-        
-        // Window/Tab management
-        WindowManagementAction windowMgmt = new WindowManagementAction();
-        actionHandlers.put("switch_to_new_window", windowMgmt);
-        actionHandlers.put("switch_to_main_window", windowMgmt);
-        actionHandlers.put("close_current_window", windowMgmt);
-        actionHandlers.put("close_window", windowMgmt);
-        
-        // Alert handling
-        actionHandlers.put("accept_alert", new AcceptAlertAction());
-        actionHandlers.put("dismiss_alert", new DismissAlertAction());
-        actionHandlers.put("prompt_alert", new PromptAlertAction());
-
-        // Iframe handling
-        SwitchFrameAction frameMgmt = new SwitchFrameAction();
-        actionHandlers.put("switch_to_frame", frameMgmt);
-        actionHandlers.put("switch_to_main_frame", frameMgmt);
-
-        // Modal handling
-        actionHandlers.put("verify_modal_visible", new VerifyModalAction());
-        actionHandlers.put("verify_modal_not_visible", new VerifyModalAction());
-        actionHandlers.put("close_modal", new CloseModalAction());
-        
-        // Multiselect list and individual selection handling
-        VerifyCheckedAction checkVerify = new VerifyCheckedAction();
-        actionHandlers.put("multiselect_item", new MultiselectAction());
-        actionHandlers.put("verify_selected", checkVerify);
-        actionHandlers.put("verify_not_selected", checkVerify);
-        actionHandlers.put("verify_checked", checkVerify);
-        actionHandlers.put("verify_unchecked", checkVerify);
+        // Initialize action handlers using the centralized registry
+        ActionHandlerRegistry registry = new ActionHandlerRegistry();
+        actionHandlers = registry.getHandlers();
     }
 
     public void startBrowser() {
@@ -109,9 +52,15 @@ public class BrowserService {
         logger.success("Browser started successfully");
     }
 
-    public boolean executeAction(ActionPlan plan) {
+    public agent.reporting.StepExecutionReport executeAction(ActionPlan plan) {
+        long startTime = System.currentTimeMillis();
         String actionType = plan.getActionType();
         String stepText = plan.getTarget();
+        
+        // Create report
+        agent.reporting.StepExecutionReport report = new agent.reporting.StepExecutionReport()
+            .stepName(stepText)
+            .action(actionType);
 
         // Handle frame persistence
         if ("switch_to_frame".equals(actionType)) {
@@ -127,16 +76,93 @@ public class BrowserService {
 
         BrowserAction handler = actionHandlers.get(actionType);
         if (handler != null) {
-            // Always use the currently active page
-            Page activePage = getActivePage();
-            logger.debug("Executing action: {} for step: {}", actionType, stepText);
-            boolean success = handler.execute(activePage, smartLocator, plan);
-            plan.setExecuted(true);
-            return success;
+            try {
+                // Always use the currently active page
+                Page activePage = getActivePage();
+                // Ensure SmartLocator is using the active page
+                smartLocator.setPage(activePage);
+                
+                logger.debug("Executing action: {} for step: {}", actionType, stepText);
+                
+                boolean success = handler.execute(activePage, smartLocator, plan);
+                plan.setExecuted(true);
+                
+                // Capture execution details
+                long duration = System.currentTimeMillis() - startTime;
+                report.status(success ? "PASSED" : "FAILED")
+                    .duration(duration);
+                
+                // Extract locator details from plan metadata if available
+                if (plan.hasMetadata("intelligent_locator")) {
+                    report.addMetadata("usedIntelligentLocator", true);
+                }
+                
+                // Add semantic details if available
+                extractSemanticDetails(plan, report);
+                
+                // Add locator details
+                extractLocatorDetails(plan, report);
+                
+                return report;
+                
+            } catch (Exception e) {
+                long duration = System.currentTimeMillis() - startTime;
+                report.status("FAILED")
+                    .duration(duration)
+                    .errorMessage(e.getMessage());
+                logger.error("Action execution failed: {}", e.getMessage());
+                return report;
+            }
         } else {
+            long duration = System.currentTimeMillis() - startTime;
+            report.status("FAILED")
+                .duration(duration)
+                .errorMessage("Unknown action: " + actionType);
             logger.error("Unknown action: {} for step: {}", actionType, stepText);
-            return false;
+            return report;
         }
+    }
+    
+    /**
+     * Extract semantic details from ActionPlan
+     */
+    private void extractSemanticDetails(ActionPlan plan, agent.reporting.StepExecutionReport report) {
+        agent.reporting.StepExecutionReport.SemanticDetails semantic = 
+            new agent.reporting.StepExecutionReport.SemanticDetails();
+        
+        if (plan.getElementName() != null) {
+            semantic.targetDescription(plan.getElementName());
+        }
+        
+        if (plan.getValue() != null) {
+            semantic.valueProvided(plan.getValue());
+        }
+        
+        semantic.intelligenceUsed(plan.hasMetadata("intelligent_locator"));
+        
+        report.semanticLocator(semantic);
+    }
+    
+    /**
+     * Extract locator details from ActionPlan
+     */
+    private void extractLocatorDetails(ActionPlan plan, agent.reporting.StepExecutionReport report) {
+        agent.reporting.StepExecutionReport.LocatorDetails locator = 
+            new agent.reporting.StepExecutionReport.LocatorDetails();
+        
+        if (plan.getElementName() != null) {
+            locator.elementText(plan.getElementName());
+        }
+        
+        if (plan.getLocatorStrategy() != null) {
+            locator.matchStrategy(plan.getLocatorStrategy());
+        } else if (plan.hasMetadata("intelligent_locator")) {
+            locator.matchStrategy("SEMANTIC");
+        } else {
+            locator.matchStrategy("PATTERN");
+        }
+        
+        report.locatorIdentified(locator);
     }
     
     /**
@@ -160,6 +186,14 @@ public class BrowserService {
         return page; // Fallback to original page
     }
 
+    // Getter methods for action handlers
+    public Page getPage() {
+        return getActivePage();
+    }
+    
+    public SmartLocator getSmartLocator() {
+        return smartLocator;
+    }
 
     public void closeBrowser() {
         logger.info("Closing browser...");

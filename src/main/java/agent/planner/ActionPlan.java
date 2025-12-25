@@ -12,10 +12,16 @@ public class ActionPlan {
     private boolean executed = false;  
     private String rowAnchor;
     private String frameAnchor;
+    private java.util.Map<String, Object> metadata;  // For intelligent processing
 
     public ActionPlan(String actionType, String target) {
         this.actionType = actionType;
         this.target = target;
+        this.metadata = new java.util.HashMap<>();
+    }
+    
+    public ActionPlan() {
+        this.metadata = new java.util.HashMap<>();
     }
 
     public String getActionType() { return actionType; }
@@ -47,6 +53,24 @@ public class ActionPlan {
 
     public String getFrameAnchor() { return frameAnchor; }
     public void setFrameAnchor(String frameAnchor) { this.frameAnchor = frameAnchor; }
+    
+    // Metadata methods for intelligent processing
+    public void setMetadataValue(String key, Object value) {
+        metadata.put(key, value);
+    }
+    
+    public Object getMetadataValue(String key) {
+        return metadata.get(key);
+    }
+    
+    public boolean hasMetadata(String key) {
+        return metadata.containsKey(key);
+    }
+    
+    // Validation
+    public boolean isValid() {
+        return actionType != null && !actionType.equals("unknown");
+    }
 
     @Override
     public String toString() {
