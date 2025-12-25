@@ -513,5 +513,9 @@ public class SmartStepParser {
             this.regex = regex;
             this.groupMapping = groupMapping;
         }
+        
+        public Pattern getPattern() {
+            return regex;
+        }
     }
 }

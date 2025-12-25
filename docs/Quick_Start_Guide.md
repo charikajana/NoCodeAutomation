@@ -1,8 +1,9 @@
-# NoCodeAutomation - Quick Start Guide
+# TestGeni - Quick Start Guide
 
 **Author:** Chari - Automation Architect and Consultant
 
-> **You don't need to understand how the framework works!**  
+> **"Your Test Automation Genie"** 🧞  
+> You don't need to understand how TestGeni works!  
 > Just use these **3 simple methods** and you're done.
 
 ---
@@ -10,9 +11,9 @@
 ## 🚀 **3 Methods. That's It.**
 
 ```java
-agent.isSupported(step)      // Check if step works
-agent.getSuggestions(step)   // Get corrections if not
-agent.execute(step)          // Run the step
+testGeni.isSupported(step)      // Check if step works
+testGeni.getSuggestions(step)   // Get corrections if not
+testGeni.execute(step)          // Run the step
 ```
 
 **That's literally all you need to know.** ✅
@@ -24,16 +25,16 @@ agent.execute(step)          // Run the step
 ### **Step 1: Initialize the Agent**
 
 ```java
-import agent.integration.SmartAutomationAgent;
+import testGeni.integration.TestGeniAgent;
 import com.microsoft.playwright.Page;
 
 public class MyStepDefinitions {
     private Page page;  // Your Playwright page
-    private SmartAutomationAgent agent;
+    private TestGeniAgent testGeni;
     
     @Before
     public void setup() {
-        agent = new SmartAutomationAgent(page);
+        testGeni = new TestGeniAgent(page);
     }
 }
 ```
@@ -52,14 +53,14 @@ public void doSomething(String action) {
     String step = "When I " + action;
     
     // Is it supported?
-    if (agent.isSupported(step)) {
+    if (testGeni.isSupported(step)) {
         // YES - just run it!
-        agent.execute(step);
+        testGeni.execute(step);
     } else {
         // NO - get suggestions and use the best one
-        List<String> suggestions = agent.getSuggestions(step);
+        List<String> suggestions = testGeni.getSuggestions(step);
         String corrected = extractStep(suggestions.get(0));
-        agent.execute(corrected);
+        testGeni.execute(corrected);
     }
 }
 ```
@@ -81,9 +82,9 @@ public void userLogsIn() {
     String step3 = "When I click Login button";
     
     // Execute them
-    agent.execute(step1);
-    agent.execute(step2);
-    agent.execute(step3);
+    testGeni.execute(step1);
+    testGeni.execute(step2);
+    testGeni.execute(step3);
 }
 ```
 
@@ -98,12 +99,12 @@ public void userLogsIn() {
 public void fillForm(String name, String email) {
     String step = String.format("When I enter '%s' in Name", name);
     
-    if (agent.isSupported(step)) {
-        agent.execute(step);  // It works!
+    if (testGeni.isSupported(step)) {
+        testGeni.execute(step);  // It works!
     } else {
         // Get help
         logger.info("Need to fix: {}", step);
-        logger.info("Suggestions: {}", agent.getSuggestions(step));
+        logger.info("Suggestions: {}", testGeni.getSuggestions(step));
         throw new RuntimeException("Step needs correction");
     }
 }
@@ -116,18 +117,18 @@ public void fillForm(String name, String email) {
 ```java
 @When("I perform {string}")
 public void smartExecute(String stepText) {
-    if (agent.isSupported(stepText)) {
+    if (testGeni.isSupported(stepText)) {
         // Perfect - execute as-is
-        agent.execute(stepText);
+        testGeni.execute(stepText);
     } else {
         // Not perfect - auto-fix and execute
         logger.warn("Auto-fixing: {}", stepText);
-        List<String> suggestions = agent.getSuggestions(stepText);
+        List<String> suggestions = testGeni.getSuggestions(stepText);
         
         if (!suggestions.isEmpty()) {
             String fixed = extractStep(suggestions.get(0));
             logger.info("Using: {}", fixed);
-            agent.execute(fixed);
+            testGeni.execute(fixed);
         }
     }
 }
@@ -148,22 +149,22 @@ private String extractStep(String suggestion) {
 
 ### **Actions:**
 ```java
-agent.execute("When I click Submit button");
-agent.execute("When I enter 'text' in Field Name");
-agent.execute("When I select 'Option' in Dropdown");
-agent.execute("When I check Terms checkbox");
+testGeni.execute("When I click Submit button");
+testGeni.execute("When I enter 'text' in Field Name");
+testGeni.execute("When I select 'Option' in Dropdown");
+testGeni.execute("When I check Terms checkbox");
 ```
 
 ### **Navigation:**
 ```java
-agent.execute("Given I navigate to 'https://example.com'");
-agent.execute("When I click Menu > Submenu");
+testGeni.execute("Given I navigate to 'https://example.com'");
+testGeni.execute("When I click Menu > Submenu");
 ```
 
 ### **Verification:**
 ```java
-agent.execute("Then I should see 'Success message'");
-agent.execute("And verify Email contains 'test@example.com'");
+testGeni.execute("Then I should see 'Success message'");
+testGeni.execute("And verify Email contains 'test@example.com'");
 ```
 
 **Write in plain English. Let the framework figure it out.**
@@ -174,9 +175,9 @@ agent.execute("And verify Email contains 'test@example.com'");
 
 | When to Use | Method | Example |
 |-------------|--------|---------|
-| **Run a step** | `execute(step)` | `agent.execute("When I click Login")` |
-| **Check if valid** | `isSupported(step)` | `if (agent.isSupported(step)) { ... }` |
-| **Get help** | `getSuggestions(step)` | `agent.getSuggestions("Click the button")` |
+| **Run a step** | `execute(step)` | `testGeni.execute("When I click Login")` |
+| **Check if valid** | `isSupported(step)` | `if (testGeni.isSupported(step)) { ... }` |
+| **Get help** | `getSuggestions(step)` | `testGeni.getSuggestions("Click the button")` |
 
 **That's ALL you need to remember!**
 
@@ -186,23 +187,23 @@ agent.execute("And verify Email contains 'test@example.com'");
 
 ### **Pattern 1: Simple Execution**
 ```java
-agent.execute("When I click Submit");
+testGeni.execute("When I click Submit");
 ```
 
 ### **Pattern 2: With Validation**
 ```java
-if (agent.isSupported(step)) {
-    agent.execute(step);
+if (testGeni.isSupported(step)) {
+    testGeni.execute(step);
 }
 ```
 
 ### **Pattern 3: With Auto-Fix**
 ```java
-if (!agent.isSupported(step)) {
-    String fixed = agent.getSuggestions(step).get(0);
-    agent.execute(extractStep(fixed));
+if (!testGeni.isSupported(step)) {
+    String fixed = testGeni.getSuggestions(step).get(0);
+    testGeni.execute(extractStep(fixed));
 } else {
-    agent.execute(step);
+    testGeni.execute(step);
 }
 ```
 
@@ -216,16 +217,16 @@ if (!agent.isSupported(step)) {
 @When("user registers")
 public void userRegisters() {
     // Just write steps in natural language
-    agent.execute("When I enter 'John' in First Name");
-    agent.execute("When I enter 'Doe' in Last Name");
-    agent.execute("When I enter 'john@test.com' in Email");
-    agent.execute("When I enter 'password123' in Password");
-    agent.execute("When I select 'United States' in Country");
-    agent.execute("When I check Terms and Conditions");
-    agent.execute("When I click Register button");
+    testGeni.execute("When I enter 'John' in First Name");
+    testGeni.execute("When I enter 'Doe' in Last Name");
+    testGeni.execute("When I enter 'john@test.com' in Email");
+    testGeni.execute("When I enter 'password123' in Password");
+    testGeni.execute("When I select 'United States' in Country");
+    testGeni.execute("When I check Terms and Conditions");
+    testGeni.execute("When I click Register button");
     
     // Verify
-    agent.execute("Then I should see 'Registration successful'");
+    testGeni.execute("Then I should see 'Registration successful'");
 }
 ```
 
@@ -237,7 +238,7 @@ public void userRegisters() {
 
 ### **Option 1: Get Suggestions**
 ```java
-List<String> help = agent.getSuggestions("Click the button");
+List<String> help = testGeni.getSuggestions("Click the button");
 
 // Output:
 // ["95% - When I click button (Standard pattern)",
@@ -282,7 +283,7 @@ Then "[text]" should be visible
 ### **Tip 1: Use getSuggestions() to Learn**
 ```java
 // Don't know the right syntax?
-List<String> suggestions = agent.getSuggestions("your step here");
+List<String> suggestions = testGeni.getSuggestions("your step here");
 suggestions.forEach(System.out::println);
 
 // Copy the suggestion that looks good!
@@ -293,9 +294,9 @@ suggestions.forEach(System.out::println);
 String[] steps = { /*... many steps ...*/ };
 
 for (String step : steps) {
-    if (!agent.isSupported(step)) {
+    if (!testGeni.isSupported(step)) {
         System.out.println("FIX: " + step);
-        System.out.println("USE: " + agent.getSuggestions(step).get(0));
+        System.out.println("USE: " + testGeni.getSuggestions(step).get(0));
     }
 }
 ```
@@ -303,12 +304,12 @@ for (String step : steps) {
 ### **Tip 3: Build a Helper Method**
 ```java
 public void smartExecute(String step) {
-    if (agent.isSupported(step)) {
-        agent.execute(step);
+    if (testGeni.isSupported(step)) {
+        testGeni.execute(step);
     } else {
-        String fixed = extractStep(agent.getSuggestions(step).get(0));
+        String fixed = extractStep(testGeni.getSuggestions(step).get(0));
         logger.info("Auto-corrected: {} → {}", step, fixed);
-        agent.execute(fixed);
+        testGeni.execute(fixed);
     }
 }
 
@@ -336,8 +337,8 @@ smartExecute("any step you write");
 ## ✅ **What You DO Need to Know**
 
 1. ✅ Write steps in natural language
-2. ✅ Use `agent.execute(step)`
-3. ✅ If it fails, use `agent.getSuggestions(step)`
+2. ✅ Use `testGeni.execute(step)`
+3. ✅ If it fails, use `testGeni.getSuggestions(step)`
 4. ✅ Copy the suggestion and try again
 
 **That's it. Seriously.**
@@ -349,15 +350,15 @@ smartExecute("any step you write");
 ```
 Write a natural language step
            ↓
-Does agent.isSupported(step) return true?
+Does testGeni.isSupported(step) return true?
            ↓
-    YES ──────────→ agent.execute(step) → ✓ DONE
+    YES ──────────→ testGeni.execute(step) → ✓ DONE
            ↓
-    NO  → Get suggestions: agent.getSuggestions(step)
+    NO  → Get suggestions: testGeni.getSuggestions(step)
            ↓
            Copy first suggestion
            ↓
-           agent.execute(correctedStep) → ✓ DONE
+           testGeni.execute(correctedStep) → ✓ DONE
 ```
 
 **Follow this flow. Every time.**
@@ -368,16 +369,16 @@ Does agent.isSupported(step) return true?
 
 ```java
 // 1. Initialize (once)
-SmartAutomationAgent agent = new SmartAutomationAgent(page);
+TestGeniAgent testGeni = new TestGeniAgent(page);
 
 // 2. Execute steps (always)
-agent.execute("When I click Login");
+testGeni.execute("When I click Login");
 
 // 3. Check if needed (optional)
-if (agent.isSupported(step)) { }
+if (testGeni.isSupported(step)) { }
 
 // 4. Get help if stuck (when needed)
-List<String> help = agent.getSuggestions(step);
+List<String> help = testGeni.getSuggestions(step);
 ```
 
 **4 lines. That's your entire toolkit.**
@@ -388,10 +389,10 @@ List<String> help = agent.getSuggestions(step);
 
 You now know **everything** you need to use NoCodeAutomation:
 
-✅ How to initialize: `new SmartAutomationAgent(page)`  
-✅ How to execute: `agent.execute("step")`  
-✅ How to check: `agent.isSupported("step")`  
-✅ How to fix: `agent.getSuggestions("step")`  
+✅ How to initialize: `new TestGeniAgent(page)`  
+✅ How to execute: `testGeni.execute("step")`  
+✅ How to check: `testGeni.isSupported("step")`  
+✅ How to fix: `testGeni.getSuggestions("step")`  
 
 **Start writing tests!**
 
@@ -402,7 +403,7 @@ You now know **everything** you need to use NoCodeAutomation:
 ### **Still confused about syntax?**
 ```java
 // Just run this:
-agent.getSuggestions("your step here");
+testGeni.getSuggestions("your step here");
 
 // It will tell you EXACTLY what to write!
 ```
@@ -422,9 +423,9 @@ Look at these feature files:
 ### **The Only 3 Things You Need:**
 
 ```java
-1. agent.execute("natural language step")      // Run
-2. agent.isSupported("step")                   // Check
-3. agent.getSuggestions("step")                // Fix
+1. testGeni.execute("natural language step")      // Run
+2. testGeni.isSupported("step")                   // Check
+3. testGeni.getSuggestions("step")                // Fix
 ```
 
 **That's it. You're now a NoCodeAutomation expert!** 🚀

@@ -56,7 +56,7 @@ public class IntelligentStepProcessor {
             StepIntent intent = intentAnalyzer.analyzeStep(step);
             
             // If we got a valid intent (not UNKNOWN), we can process it
-            if (intent != null && intent.getAction() != StepIntent.ActionType.UNKNOWN) {
+            if (intent != null && intent.getActionType() != IntentAnalyzer.ActionType.UNKNOWN) {
                 return true;
             }
             

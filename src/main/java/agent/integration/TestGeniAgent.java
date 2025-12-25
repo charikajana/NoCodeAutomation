@@ -11,9 +11,9 @@ import com.microsoft.playwright.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SmartAutomationAgent {
+public class TestGeniAgent {
     
-    private static final LoggerUtil logger = LoggerUtil.getLogger(SmartAutomationAgent.class);
+    private static final LoggerUtil logger = LoggerUtil.getLogger(TestGeniAgent.class);
     
     private Page page;
     private SmartLocator smartLocator;
@@ -23,7 +23,7 @@ public class SmartAutomationAgent {
     /**
      * Initialize with external Playwright Page (from Selenium/Playwright BDD tests)
      */
-    public SmartAutomationAgent(Page page) {
+    public TestGeniAgent(Page page) {
         this.page = page;
         this.smartLocator = new SmartLocator(page);
         this.browserService = new BrowserService(page, smartLocator);

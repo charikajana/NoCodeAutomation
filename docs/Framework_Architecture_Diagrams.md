@@ -1,11 +1,18 @@
-# NoCodeAutomation Framework - Complete Architecture Overview
+# TestGeni Framework - Complete Architecture Overview
+
+**Author:** Chari - Automation Architect and Consultant
+
+> **"Your Test Automation Genie"** 🧞  
+> Intelligent Browser Automation Platform
+
+---
 
 ## 🎯 High-Level Architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│                         NoCodeAutomation Framework                           │
-│                    Intelligent Browser Automation Platform                   │
+│                            TestGeni Framework                                │
+│              "Your Test Automation Genie" - Intelligent Automation           │
 └──────────────────────────────────────────────────────────────────────────────┘
                                         │
                     ┌───────────────────┼───────────────────┐
@@ -55,7 +62,7 @@
 │  │  • Reports          │  │  • JUnit            │  │  • Integration     │ │
 │  │                     │  │                     │  │                    │ │
 │  │  Input:             │  │  Input:             │  │  Input:            │ │
-│  │  Feature/*.feature  │  │  @When("I click")   │  │  agent.execute()   │ │
+│  │  Feature/*.feature  │  │  @When("I click")   │  │  testgeni.execute()   │ │
 │  └──────────┬──────────┘  └──────────┬──────────┘  └──────────┬─────────┘ │
 │             │                        │                         │           │
 │             └────────────────────────┼─────────────────────────┘           │
@@ -471,7 +478,7 @@ MatchingHistory
 │  │      // ═══════════════════════════════════════                  │     │
 │  │      // Option 1: Try NoCodeAutomation First                      │     │
 │  │      // ═══════════════════════════════════════                  │     │
-│  │      if (agent.execute(step)) {                                   │     │
+│  │      if (testgeni.execute(step)) {                                   │     │
 │  │          ✅ SUCCESS - No manual locators needed!                  │     │
 │  │          return;                                                   │     │
 │  │      }                                                             │     │
@@ -484,7 +491,7 @@ MatchingHistory
 │  │                                                                    │     │
 │  │  @Then("I should see {string}")                                   │     │
 │  │  public void verifyText(String expectedText) {                    │     │
-│  │      StepExecutionReport report = agent.executeWithReport(...);   │     │
+│  │      StepExecutionReport report = testgeni.executeWithReport(...);   │     │
 │  │                                                                    │     │
 │  │      if (report.getValidation() != null) {                        │     │
 │  │          String expected = report.getValidation().getExpected();  │     │

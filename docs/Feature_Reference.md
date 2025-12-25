@@ -1,8 +1,9 @@
-# NoCodeAutomation - Complete Feature Reference
+# TestGeni - Complete Feature Reference
 
 **Author:** Chari - Automation Architect and Consultant
 
-> **Quick Reference**: All supported features with example steps  
+> **"Your Test Automation Genie"** 🧞  
+> Quick Reference: All supported features with example steps  
 > Copy any example and adapt it to your needs!
 
 ---
@@ -349,7 +350,7 @@ Your use: When I enter "your-value" in Your Field Name
 ### **Tip 2: Check Support**
 Not sure if your step will work?
 ```java
-if (agent.isSupported("your step")) {
+if (testGeni.isSupported("your step")) {
     // It works!
 }
 ```
@@ -357,7 +358,7 @@ if (agent.isSupported("your step")) {
 ### **Tip 3: Get Suggestions**
 Wrong syntax?
 ```java
-List<String> help = agent.getSuggestions("your step");
+List<String> help = testGeni.getSuggestions("your step");
 // Copy the first suggestion
 ```
 
@@ -390,8 +391,8 @@ List<String> help = agent.getSuggestions("your step");
 
 **If you need something not listed here:**
 1. Try similar patterns
-2. Use `agent.getSuggestions("your step")`
-3. Check if it's supported: `agent.isSupported("your step")`
+2. Use `testGeni.getSuggestions("your step")`
+3. Check if it's supported: `testGeni.isSupported("your step")`
 
 ---
 
@@ -400,13 +401,13 @@ List<String> help = agent.getSuggestions("your step");
 ### **Step not working?**
 ```java
 // Get immediate suggestions
-agent.getSuggestions("your step");
+testGeni.getSuggestions("your step");
 ```
 
 ### **Want to validate before running?**
 ```java
 // Check if supported
-agent.isSupported("your step");
+testGeni.isSupported("your step");
 ```
 
 ### **Still stuck?**
