@@ -747,6 +747,42 @@ public class PatternRegistry {
             "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:select|choose|pick)\\s+(?:multiple\\s+)?(?:items?|values?)\\s+[\"']([^\"']+)[\"']",
             Map.of("value", 1));
         
+        // ========================================
+        // DESELECT / REMOVE FROM MULTISELECT/AUTOCOMPLETE
+        // ========================================
+        // Remove/deselect options from multiselect or autocomplete
+        // Example: "remove 'Green' from Type multiple color names"
+        register.add("deselect",
+            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:remove|deselect|clear|delete)\\s+[\"']([^\"']+)[\"']\\s+from\\s+(.+?)$",
+            Map.of("value", 1, "elementName", 2));
+        
+        // ========================================
+        // SLIDER / RANGE INPUT
+        // ========================================
+        // Set slider value: "Set slider to '75'", "Move Volume to '80'", "Adjust brightness to '50'"
+        // Note: Element names are NOT in quotes, only values are in quotes
+        register.add("set_slider",
+            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*" +
+            "(?:set|move|adjust|slide|drag)\\s+" +
+            "(?:(?:the|a|an)\\s+)?" +
+            "(.+?)\\s*" +
+            "(?:slider)?\\s*" +
+            "(?:to|at)\\s+" +
+            "[\"']([^\"']+)[\"']",
+            Map.of("elementName", 1, "value", 2));
+        
+        // ========================================
+        // PROGRESS BAR / MONITORING
+        // ========================================
+        // Wait for progress: "Wait for progress bar to reach '100%'"
+        register.add("wait_for_progress",
+            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*" +
+            "(?:wait|monitor)\\s+(?:for\\s+)?(?:the\\s+)?" +
+            "(.+?)\\s*" +
+            "(?:to|until)\\s+(?:reach|at)\\s+" +
+            "[\"']([^\"']+)[\"']",
+            Map.of("elementName", 1, "value", 2));
+        
         // Overly broad pattern - commented out to prevent false matches
         // register.add("multiselect_item",
         //     "^(?:when|and)?\\s*(?:multi-?select|select)\\s+(.+)",

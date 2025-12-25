@@ -55,10 +55,16 @@ public class ClickAction implements BrowserAction {
         
         if (clickable != null) {
             return performClick(clickable, targetName);
-        } else {
-            logger.failure("Element not found for clicking: {}", targetName);
-            return false;
         }
+        
+        // 4. If element not found, check if it might be in an autocomplete dropdown
+        logger.debug("Element not found normally, checking autocomplete context...");
+        if (tryClickAutocompleteOption(page, targetName)) {
+            return true;
+        }
+        
+        logger.failure("Element not found for clicking: {}", targetName);
+        return false;
     }
 
     /**
@@ -87,6 +93,66 @@ public class ClickAction implements BrowserAction {
                 logger.failure("Failed to click element: {}. Error: {}", targetName, e2.getMessage());
                 return false;
             }
+        }
+    }
+    
+    /**
+     * Try to click an option in an autocomplete dropdown.
+     * This method assumes an autocomplete dropdown is already open and visible.
+     * 
+     * @param page The page object
+     * @param optionText The text of the option to click
+     * @return true if successfully clicked, false otherwise
+     */
+    private boolean tryClickAutocompleteOption(Page page, String optionText) {
+        try {
+            logger.debug("Searching for '{}' in autocomplete suggestions...", optionText);
+            
+            Locator option = null;
+            
+            // Pattern 1: React-Select autocomplete options
+            option = page.locator(String.format("div[id*='option']:has-text(\"%s\")", optionText)).first();
+            if (option.count() > 0 && option.isVisible()) {
+                logger.debug("Found autocomplete option using React-Select pattern");
+                option.click();
+                logger.success("Clicked '{}' in autocomplete dropdown", optionText);
+                return true;
+            }
+            
+            // Pattern 2: ARIA role option (standard autocomplete)
+            option = page.getByRole(com.microsoft.playwright.options.AriaRole.OPTION,
+                    new Page.GetByRoleOptions().setName(optionText)).first();
+            if (option.count() > 0 && option.isVisible()) {
+                logger.debug("Found autocomplete option using ARIA role");
+                option.click();
+                logger.success("Clicked '{}' in autocomplete dropdown", optionText);
+                return true;
+            }
+            
+            // Pattern 3: Generic dropdown option with class
+            option = page.locator(String.format("div[class*='option']:has-text(\"%s\")", optionText)).first();
+            if (option.count() > 0 && option.isVisible()) {
+                logger.debug("Found autocomplete option using generic class pattern");
+                option.click();
+                logger.success("Clicked '{}' in autocomplete dropdown", optionText);
+                return true;
+            }
+            
+            // Pattern 4: List item in dropdown
+            option = page.locator(String.format("li[role='option']:has-text(\"%s\")", optionText)).first();
+            if (option.count() > 0 && option.isVisible()) {
+                logger.debug("Found autocomplete option using list pattern");
+                option.click();
+                logger.success("Clicked '{}' in autocomplete dropdown", optionText);
+                return true;
+            }
+            
+            logger.debug("Option '{}' not found in autocomplete suggestions", optionText);
+            return false;
+            
+        } catch (Exception e) {
+            logger.debug("Error while searching autocomplete: {}", e.getMessage());
+            return false;
         }
     }
 }

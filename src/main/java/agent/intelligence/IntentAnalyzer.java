@@ -282,7 +282,30 @@ public class IntentAnalyzer {
             }
         }
         
-        // PRIORITY 3: Check for other action verbs (LinkedHashMap maintains insertion order)
+        // PRIORITY 3: Special handling for 'remove' verb (context-sensitive)
+        if (lowerStep.contains("remove")) {
+            // "remove 'X' from Y" → SELECT (deselect from multiselect/autocomplete)
+            if (lowerStep.matches(".*remove.*from.*")) {
+                return ActionType.SELECT;
+            }
+        }
+
+        // PRIORITY 4: Special handling for 'set' verb (context-sensitive for sliders)
+        if (lowerStep.contains("set ")) {
+            if (lowerStep.contains("slider") || lowerStep.contains("range")) {
+                return ActionType.UNKNOWN;
+            }
+        }
+
+        // PRIORITY 5: Special handling for 'wait' verb (context-sensitive for progress bars)
+        if (lowerStep.contains("wait ")) {
+            if (lowerStep.contains("progress") || lowerStep.contains("monitoring")) {
+                // Let regex patterns handle progress bar synchronization
+                return ActionType.UNKNOWN;
+            }
+        }
+        
+        // PRIORITY 6: Check for other action verbs (LinkedHashMap maintains insertion order)
         // Longer verbs are checked first for specificity
         for (Map.Entry<String, ActionType> entry : ACTION_VERBS.entrySet()) {
             String verb = entry.getKey();

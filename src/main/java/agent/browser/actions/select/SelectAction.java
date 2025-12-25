@@ -33,14 +33,20 @@ public class SelectAction implements BrowserAction {
             }
         }
 
-        logger.info("Finding dropdown: '{}'", dropdownLabel);
+        logger.info("Finding element: '{}'", dropdownLabel);
         
-        // Step 1: Find the dropdown wrapper using smart locator
+        // Step 1: Find the element using smart locator
         Locator dropdownWrapper = locator.waitForSmartElement(dropdownLabel, "select", scope, plan.getFrameAnchor());
         
         if (dropdownWrapper == null) {
-            logger.failure("Dropdown element not found: {}", dropdownLabel);
+            logger.failure("Element not found: {}", dropdownLabel);
             return false;
+        }
+        
+        // Step 1.5: Check if this is an AUTOCOMPLETE field (not a dropdown)
+        if (isAutocompleteField(dropdownWrapper)) {
+            logger.info("Detected AUTOCOMPLETE field, using autocomplete logic");
+            return handleAutocomplete(page, dropdownWrapper, optionText, dropdownLabel);
         }
 
         // Step 2: Determine if it's a native <select> or custom dropdown
@@ -489,6 +495,147 @@ public class SelectAction implements BrowserAction {
             }
         } catch (Exception e) {
             // Silently fail if can't clear
+        }
+    }
+    
+    /**
+     * Detect if this is an autocomplete field vs a dropdown.
+     * Autocomplete fields typically:
+     * - Are input elements (not divs)
+     * - Have role="combobox" or type="text"
+     * - Have autocomplete attributes
+     * - OR contain an input with these properties
+     */
+    private boolean isAutocompleteField(Locator element) {
+        try {
+            String tagName = (String) element.evaluate("el => el.tagName.toLowerCase()");
+            String role = (String) element.evaluate("el => el.getAttribute('role') || ''");
+            String type = (String) element.evaluate("el => el.getAttribute('type') || ''");
+            String autocomplete = (String) element.evaluate("el => el.getAttribute('autocomplete') || ''");
+            String ariaAutoComplete = (String) element.evaluate("el => el.getAttribute('aria-autocomplete') || ''");
+            
+            // Check for autocomplete indicators on the element itself
+            boolean isInputElement = "input".equals(tagName) || "textarea".equals(tagName);
+            boolean hasComboboxRole = "combobox".equals(role);
+            boolean hasTextType = "text".equals(type) || type.isEmpty();
+            boolean hasAutocompleteAttr = !autocomplete.isEmpty() || !ariaAutoComplete.isEmpty();
+            
+            // If it's an input with combobox role or autocomplete attributes, it's likely autocomplete
+            if (isInputElement && (hasComboboxRole || hasAutocompleteAttr || ariaAutoComplete.equals("list"))) {
+                logger.debug("Autocomplete detected: input={}, role={}, autocomplete={}", tagName, role, ariaAutoComplete);
+                return true;
+            }
+            
+            // Check if there's an input child with autocomplete attributes (for React-Select wrappers)
+            Locator inputChild = element.locator("input[role='combobox'], input[aria-autocomplete], input[type='text']").first();
+            if (inputChild.count() > 0) {
+                String childRole = (String) inputChild.evaluate("el => el.getAttribute('role') || ''");
+                String childAriaAuto = (String) inputChild.evaluate("el => el.getAttribute('aria-autocomplete') || ''");
+                
+                if ("combobox".equals(childRole) || "list".equals(childAriaAuto) || !childAriaAuto.isEmpty()) {
+                    logger.debug("Autocomplete detected: wrapper contains input with role={}, aria-autocomplete={}", childRole, childAriaAuto);
+                    // Update the element reference to the input for handleAutocomplete
+                    return true;
+                }
+            }
+            
+            return false;
+        } catch (Exception e) {
+            logger.debug("Error detecting autocomplete: {}", e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Handle autocomplete field interaction:
+     * 1. Find the actual input field (if wrapper was passed)
+     * 2. Clear the field
+     * 3. Type partial text to trigger suggestions
+     * 4. Wait for suggestions dropdown
+     * 5. Click the matching option
+     */
+    private boolean handleAutocomplete(Page page, Locator elementOrWrapper, String optionText, String label) {
+        try {
+            logger.info("Autocomplete: Selecting '{}' from '{}'", optionText, label);
+            
+            // Step 0: Find the actual input field if a wrapper was passed
+            String tagName = (String) elementOrWrapper.evaluate("el => el.tagName.toLowerCase()");
+            Locator inputField = elementOrWrapper;
+            
+            if (!"input".equals(tagName) && !"textarea".equals(tagName)) {
+                // It's a wrapper, find the input inside
+                logger.debug("Wrapper detected, finding input field inside...");
+                Locator foundInput = elementOrWrapper.locator("input[role='combobox'], input[aria-autocomplete], input[type='text']").first();
+                if (foundInput.count() > 0) {
+                    inputField = foundInput;
+                    logger.debug("Found input field inside wrapper");
+                } else {
+                    logger.failure("No input field found inside wrapper for autocomplete");
+                    return false;
+                }
+            }
+            
+            // Step 1: Clear and focus the input
+            inputField.click();
+            inputField.fill("");
+            Thread.sleep(200);
+            
+            // Step 2: Type partial text to trigger autocomplete
+            // Use first 2 characters or full text if shorter
+            String partialText = optionText.length() > 2 ? optionText.substring(0, 2) : optionText;
+            logger.debug("Typing partial text: '{}'", partialText);
+            inputField.type(partialText);
+            
+            // Step 3: Wait for autocomplete suggestions to appear
+            Thread.sleep(500);
+            
+            // Step 4: Find and click the matching option from suggestions
+            // Try multiple patterns for autocomplete suggestions
+            Locator option = null;
+            
+            // Pattern 1: React-Select autocomplete
+            option = page.locator(String.format("div[id*='option']:has-text(\"%s\")", optionText)).first();
+            if (option.count() > 0 && option.isVisible()) {
+                logger.debug("Found option using React-Select pattern");
+                option.click();
+                logger.success("Selected '{}' from autocomplete '{}'", optionText, label);
+                return true;
+            }
+            
+            // Pattern 2: ARIA role option
+            option = page.getByRole(com.microsoft.playwright.options.AriaRole.OPTION,
+                    new Page.GetByRoleOptions().setName(optionText)).first();
+            if (option.count() > 0 && option.isVisible()) {
+                logger.debug("Found option using ARIA role");
+                option.click();
+                logger.success("Selected '{}' from autocomplete '{}'", optionText, label);
+                return true;
+            }
+            
+            // Pattern 3: Generic dropdown option
+            option = page.locator(String.format("div[class*='option']:has-text(\"%s\")", optionText)).first();
+            if (option.count() > 0 && option.isVisible()) {
+                logger.debug("Found option using generic pattern");
+                option.click();
+                logger.success("Selected '{}' from autocomplete '{}'", optionText, label);
+                return true;
+            }
+            
+            // Pattern 4: List item
+            option = page.locator(String.format("li:has-text(\"%s\")", optionText)).first();
+            if (option.count() > 0 && option.isVisible()) {
+                logger.debug("Found option using list pattern");
+                option.click();
+                logger.success("Selected '{}' from autocomplete '{}'", optionText, label);
+                return true;
+            }
+            
+            logger.failure("Autocomplete option '{}' not found in suggestions", optionText);
+            return false;
+            
+        } catch (Exception e) {
+            logger.failure("Autocomplete interaction failed: {}", e.getMessage());
+            return false;
         }
     }
 }

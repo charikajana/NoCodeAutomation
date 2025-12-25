@@ -100,10 +100,16 @@ public class SmartLocator {
         
         // Check if user provided a type descriptor at the end
         // Note: We exclude "box" since it's commonly part of element names (Text Box, Search Box, etc.)
-        if (cleanName.matches("(?i).*\\s+(link|button|icon|checkbox|check box|radio|element|field|input|dropdown|drop down|select|textarea|text area)$")) {
+        if (cleanName.matches("(?i).*\\s+(link|button|icon|checkbox|check box|radio|element|field|input|dropdown|drop down|select|textarea|text area|slider|range|progress bar|progressbar)$")) {
             // Extract the type descriptor
             String[] parts = cleanName.split("\\s+");
-            String typeHint = parts[parts.length - 1].toLowerCase();
+            // Handle multi-word hints like "progress bar"
+            String typeHint;
+            if (cleanName.toLowerCase().endsWith("progress bar")) {
+                typeHint = "progressbar";
+            } else {
+                typeHint = parts[parts.length - 1].toLowerCase();
+            }
             
             // Map natural language to element types for DOM scanning
             String mappedType = switch (typeHint) {
@@ -114,6 +120,8 @@ public class SmartLocator {
                 case "input", "field" -> "input";
                 case "dropdown", "drop down", "select" -> "select";
                 case "textarea", "text area" -> "textarea";
+                case "slider", "range" -> "slider";
+                case "progressbar", "progress bar" -> "progressbar";
                 default -> parsedType; // Use original if no match
             };
             
@@ -124,7 +132,7 @@ public class SmartLocator {
             }
             
             // Extract clean name without the type descriptor
-            cleanName = cleanName.replaceAll("(?i)\\s+(link|button|icon|checkbox|radio|element|field|input|dropdown|select|textarea)$", "").trim();
+            cleanName = cleanName.replaceAll("(?i)\\s+(link|button|icon|checkbox|radio|element|field|input|dropdown|select|textarea|slider|range|progress bar|progressbar)$", "").trim();
         }
         
         // Use the clean name and detected type for searching

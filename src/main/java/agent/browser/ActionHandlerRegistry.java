@@ -15,6 +15,8 @@ import agent.browser.actions.modal.*;
 import agent.browser.actions.list.*;
 import agent.browser.actions.keyboard.*;
 import agent.browser.actions.scroll.ScrollAction;
+import agent.browser.actions.slider.*;
+import agent.browser.actions.progress.*;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -49,6 +51,8 @@ public class ActionHandlerRegistry {
         registerListActions();
         registerKeyboardActions();
         registerScrollActions();
+        registerSliderActions();
+        registerProgressActions();
         registerUtilityActions();
         registerBrowserLifecycleActions();
     }
@@ -154,6 +158,14 @@ public class ActionHandlerRegistry {
     
     private void registerScrollActions() {
         handlers.put("scroll", new ScrollAction());
+    }
+    
+    private void registerSliderActions() {
+        handlers.put("set_slider", new SetSliderAction());
+    }
+    
+    private void registerProgressActions() {
+        handlers.put("wait_for_progress", new WaitForProgressAction());
     }
     
     private void registerUtilityActions() {
