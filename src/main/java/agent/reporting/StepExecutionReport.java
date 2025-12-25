@@ -47,6 +47,9 @@ public class StepExecutionReport {
     @JsonProperty("metadata")
     private Map<String, Object> metadata;
     
+    @JsonProperty("validation")
+    private ValidationResult validation;  // For verification/validation actions
+    
     public StepExecutionReport() {
         this.metadata = new HashMap<>();
         this.executionTime = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
@@ -93,6 +96,11 @@ public class StepExecutionReport {
         return this;
     }
     
+    public StepExecutionReport validation(ValidationResult validation) {
+        this.validation = validation;
+        return this;
+    }
+    
     /**
      * Convert to formatted JSON string
      */
@@ -126,6 +134,7 @@ public class StepExecutionReport {
     public Long getDuration() { return durationMs; }
     public String getErrorMessage() { return errorMessage; }
     public Map<String, Object> getMetadata() { return metadata; }
+    public ValidationResult getValidation() { return validation; }
     
     /**
      * Locator details
@@ -244,5 +253,79 @@ public class StepExecutionReport {
         public Boolean getIntelligenceUsed() { return intelligenceUsed; }
         public Double getLearningBoost() { return learningBoost; }
         public Integer getCandidatesEvaluated() { return candidatesEvaluated; }
+    }
+    
+    /**
+     * Validation/Verification result details
+     * Contains expected vs actual comparison for user logic
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class ValidationResult {
+        @JsonProperty("expected")
+        private String expected;
+        
+        @JsonProperty("actual")
+        private String actual;
+        
+        @JsonProperty("comparisonType")
+        private String comparisonType;  // EXACT, CONTAINS, REGEX, NUMERIC, BOOLEAN
+        
+        @JsonProperty("match")
+        private Boolean match;
+        
+        @JsonProperty("elementFound")
+        private Boolean elementFound;
+        
+        @JsonProperty("elementVisible")
+        private Boolean elementVisible;
+        
+        @JsonProperty("details")
+        private String details;  // Additional context (e.g., "Text found in modal")
+        
+        public ValidationResult() {}
+        
+        public ValidationResult expected(String expected) {
+            this.expected = expected;
+            return this;
+        }
+        
+        public ValidationResult actual(String actual) {
+            this.actual = actual;
+            return this;
+        }
+        
+        public ValidationResult comparisonType(String type) {
+            this.comparisonType = type;
+            return this;
+        }
+        
+        public ValidationResult match(Boolean match) {
+            this.match = match;
+            return this;
+        }
+        
+        public ValidationResult elementFound(Boolean found) {
+            this.elementFound = found;
+            return this;
+        }
+        
+        public ValidationResult elementVisible(Boolean visible) {
+            this.elementVisible = visible;
+            return this;
+        }
+        
+        public ValidationResult details(String details) {
+            this.details = details;
+            return this;
+        }
+        
+        // Getters
+        public String getExpected() { return expected; }
+        public String getActual() { return actual; }
+        public String getComparisonType() { return comparisonType; }
+        public Boolean getMatch() { return match; }
+        public Boolean getElementFound() { return elementFound; }
+        public Boolean getElementVisible() { return elementVisible; }
+        public String getDetails() { return details; }
     }
 }

@@ -40,6 +40,33 @@ public class IntelligentStepProcessor {
     }
     
     /**
+     * Check if a step can be processed by the intelligence layer
+     * WITHOUT actually executing it.
+     * 
+     * @param step Natural language step
+     * @return true if intelligence layer can understand this step
+     */
+    public boolean canProcess(String step) {
+        if (step == null || step.trim().isEmpty()) {
+            return false;
+        }
+        
+        try {
+            // Try to extract intent
+            StepIntent intent = intentAnalyzer.analyzeStep(step);
+            
+            // If we got a valid intent (not UNKNOWN), we can process it
+            if (intent != null && intent.getAction() != StepIntent.ActionType.UNKNOWN) {
+                return true;
+            }
+            
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    
+    /**
      * Process step intelligently
      * 
      * @param step Natural language step

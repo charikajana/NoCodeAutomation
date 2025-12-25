@@ -25,31 +25,23 @@ public class BrowserService {
 
     private static final LoggerUtil logger = LoggerUtil.getLogger(BrowserService.class);
     
-    private Playwright playwright;
-    private Browser browser;
-    private Page page;
-    private SmartLocator smartLocator;
-    private Map<String, BrowserAction> actionHandlers;
+    private final Page page;
+    private final SmartLocator smartLocator;
+    private final Map<String, BrowserAction> actionHandlers;
     private String currentFrameAnchor = null;
 
-    public BrowserService() {
+    /**
+     * Constructor that accepts externally managed Page and SmartLocator
+     */
+    public BrowserService(Page page, SmartLocator smartLocator) {
+        this.page = page;
+        this.smartLocator = smartLocator;
+        
         // Initialize action handlers using the centralized registry
         ActionHandlerRegistry registry = new ActionHandlerRegistry();
-        actionHandlers = registry.getHandlers();
-    }
-
-    public void startBrowser() {
-        logger.info("Starting browser...");
-        playwright = Playwright.create();
-        browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(false));
-        page = browser.newPage();
-        page.setDefaultTimeout(120000);
-        page.setDefaultNavigationTimeout(120000);
+        this.actionHandlers = registry.getHandlers();
         
-        // Initialize SmartLocator with the page
-        smartLocator = new SmartLocator(page);
-        currentFrameAnchor = null;
-        logger.success("Browser started successfully");
+        logger.info("BrowserService initialized with external Page instance");
     }
 
     public agent.reporting.StepExecutionReport executeAction(ActionPlan plan) {
@@ -102,6 +94,13 @@ public class BrowserService {
                 
                 // Add locator details
                 extractLocatorDetails(plan, report);
+                
+                // Add validation result if available (for verification actions)
+                if (plan.hasMetadata("validation")) {
+                    agent.reporting.StepExecutionReport.ValidationResult validation = 
+                        (agent.reporting.StepExecutionReport.ValidationResult) plan.getMetadataValue("validation");
+                    report.validation(validation);
+                }
                 
                 return report;
                 
@@ -186,19 +185,12 @@ public class BrowserService {
         return page; // Fallback to original page
     }
 
-    // Getter methods for action handlers
+    // Getter methods (optional, for backward compatibility if needed)
     public Page getPage() {
         return getActivePage();
     }
     
     public SmartLocator getSmartLocator() {
         return smartLocator;
-    }
-
-    public void closeBrowser() {
-        logger.info("Closing browser...");
-        if (browser != null) browser.close();
-        if (playwright != null) playwright.close();
-        logger.success("Browser closed successfully");
     }
 }

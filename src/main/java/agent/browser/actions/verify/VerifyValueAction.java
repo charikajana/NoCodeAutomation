@@ -31,6 +31,16 @@ public class VerifyValueAction implements BrowserAction {
         
         if (element == null) {
             logger.failure("Field not found for value verification: {}", targetName);
+            
+            // Store validation result for BDD integration
+            plan.setMetadataValue("validation", new agent.reporting.StepExecutionReport.ValidationResult()
+                .expected(expectedValue)
+                .actual(null)
+                .elementFound(false)
+                .match(false)
+                .comparisonType("EXACT")
+                .details("Element not found: " + targetName));
+            
             return false;
         }
 
@@ -39,7 +49,19 @@ public class VerifyValueAction implements BrowserAction {
             String actualValue = (String) element.evaluate("el => el.value || el.innerText || ''");
             actualValue = actualValue.trim();
             
-            if (actualValue.equals(expectedValue.trim())) {
+            boolean isMatch = actualValue.equals(expectedValue.trim());
+            
+            // Store validation result for BDD integration
+            plan.setMetadataValue("validation", new agent.reporting.StepExecutionReport.ValidationResult()
+                .expected(expectedValue.trim())
+                .actual(actualValue)
+                .elementFound(true)
+                .elementVisible(element.isVisible())
+                .match(isMatch)
+                .comparisonType("EXACT")
+                .details(isMatch ? "Exact match" : "Values differ"));
+            
+            if (isMatch) {
                 logger.success("Verification successful: Field '{}' contains expected value '{}'", targetName, expectedValue);
                 return true;
             } else {
@@ -48,6 +70,16 @@ public class VerifyValueAction implements BrowserAction {
             }
         } catch (Exception e) {
             logger.error("Error verifying value for {}: {}", targetName, e.getMessage());
+            
+            // Store error in validation result
+            plan.setMetadataValue("validation", new agent.reporting.StepExecutionReport.ValidationResult()
+                .expected(expectedValue)
+                .actual(null)
+                .elementFound(true)
+                .match(false)
+                .comparisonType("EXACT")
+                .details("Error reading value: " + e.getMessage()));
+            
             return false;
         }
     }

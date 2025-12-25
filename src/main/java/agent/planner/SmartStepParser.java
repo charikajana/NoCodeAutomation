@@ -46,6 +46,77 @@ public class SmartStepParser {
         logger.info("Intelligence Layer: {}", enabled ? "ENABLED" : "DISABLED");
     }
     
+    /**
+     * Check if a step is supported by the framework (matches any pattern)
+     * WITHOUT executing it. Useful for BDD integration to decide between
+     * smart automation vs custom logic.
+     * 
+     * @param step Natural language step
+     * @return true if framework can handle this step, false otherwise
+     * 
+     * Example:
+     *   if (parser.isStepSupported("When I click Submit")) {
+     *       // Use framework
+     *   } else {
+     *       // Use custom code
+     *   }
+     */
+    public boolean isStepSupported(String step) {
+        if (step == null || step.trim().isEmpty()) {
+            return false;
+        }
+        
+        String normalizedStep = step.trim();
+        
+        try {
+            // Try intelligence layer first
+            if (intelligenceEnabled) {
+                logger.debug("Checking step support via Intelligence Layer: {}", normalizedStep);
+                // Intelligence layer can handle almost any natural language
+                // Check if it can extract a valid intent
+                if (intelligentProcessor.canProcess(normalizedStep)) {
+                    logger.debug("✓ Step supported by Intelligence Layer");
+                    return true;
+                }
+            }
+            
+            // Check legacy patterns
+            logger.debug("Checking step support via Legacy Patterns: {}", normalizedStep);
+            
+            // Check combined actions
+            if (PatternRegistry.getCombinedActions().stream()
+                    .anyMatch(pattern -> pattern.matcher(normalizedStep).matches())) {
+                logger.debug("✓ Step supported by Combined Actions");
+                return true;
+            }
+            
+            // Check table patterns
+            for (List<TableStepPattern> patterns : tablePatterns.values()) {
+                for (TableStepPattern pattern : patterns) {
+                    if (pattern.getPattern().matcher(normalizedStep).matches()) {
+                        logger.debug("✓ Step supported by Table Patterns");
+                        return true;
+                    }
+                }
+            }
+            
+            // Check all registered patterns
+            for (Map.Entry<String, Pattern> entry : PatternRegistry.getAllPatterns().entrySet()) {
+                if (entry.getValue().matcher(normalizedStep).matches()) {
+                    logger.debug("✓ Step supported by Pattern: {}", entry.getKey());
+                    return true;
+                }
+            }
+            
+            logger.debug("✗ Step NOT supported by framework patterns");
+            return false;
+            
+        } catch (Exception e) {
+            logger.warn("Error checking step support: {}", e.getMessage());
+            return false;
+        }
+    }
+    
     private void initializeTablePatterns() {
        PatternRegistry.registerTablePatterns(this::addTablePattern);
     }
