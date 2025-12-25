@@ -146,6 +146,13 @@ public class IntentAnalyzer {
         ACTION_VERBS.put("test", ActionType.VERIFY);
         
         // ========================================
+        // MOUSE/HOVER ACTIONS
+        // ========================================
+        ACTION_VERBS.put("hover", ActionType.HOVER);
+        ACTION_VERBS.put("mouseover", ActionType.HOVER);
+        ACTION_VERBS.put("mouse-over", ActionType.HOVER);
+        
+        // ========================================
         // SELECT/CHOOSE ACTIONS (15+ variants)
         // ========================================
         ACTION_VERBS.put("pick", ActionType.SELECT);
@@ -295,14 +302,16 @@ public class IntentAnalyzer {
             if (lowerStep.contains("slider") || lowerStep.contains("range")) {
                 return ActionType.UNKNOWN;
             }
+            // "set date" -> DATE_SET
+            if (lowerStep.contains("date") || lowerStep.contains("picker") || lowerStep.contains("tomorrow") || lowerStep.contains("yesterday")) {
+                return ActionType.DATE_SET;
+            }
         }
 
-        // PRIORITY 5: Special handling for 'wait' verb (context-sensitive for progress bars)
-        if (lowerStep.contains("wait ")) {
-            if (lowerStep.contains("progress") || lowerStep.contains("monitoring")) {
-                // Let regex patterns handle progress bar synchronization
-                return ActionType.UNKNOWN;
-            }
+        // PRIORITY 5: Check if the value looks like a date (even if verb is 'enter' or 'fill')
+        String value = extractValue(step);
+        if (value != null && isDateValue(value)) {
+            return ActionType.DATE_SET;
         }
         
         // PRIORITY 6: Check for other action verbs (LinkedHashMap maintains insertion order)
@@ -360,20 +369,20 @@ public class IntentAnalyzer {
         // Normalize whitespace (reduce multiple spaces to single space)
         target = target.replaceAll("\\s+", " ").trim();
         
-        // For FILL actions, extract text after "in"/"into" BEFORE removing pronouns
+        // For FILL/DATE_SET/VERIFY actions, extract text after "in"/"into"/"for" BEFORE removing pronouns
         // This is critical because pronouns may appear before "in" (e.g., "I in full name")
-        if (actionType == ActionType.FILL) {
-            // Pattern: anything + (in|into) + field_name
-            Pattern inPattern = Pattern.compile("(?i).+?\\s+(in|into)\\s+(.+)$");
+        if (actionType == ActionType.FILL || actionType == ActionType.DATE_SET || actionType == ActionType.VERIFY) {
+            // Pattern: anything + (in|into|for|of|on) + field_name
+            Pattern inPattern = Pattern.compile("(?i)(.+?)\\s+(in|into|for|of|on|within)\\s+(.+)$");
             Matcher matcher = inPattern.matcher(target);
             if (matcher.find()) {
-                target = matcher.group(2);  // Get text after "in"
+                target = matcher.group(3);  // Get text after the preposition
             } else {
-                // If no "in/into" pattern, try to remove pronouns
+                // If no "in/into" pattern, try to remove pronouns at the start
                 target = target.replaceAll("(?i)^(I|user|we|you|he|she|they|it|this|that)\\s+", "");
             }
         } else {
-            // For non-FILL actions, remove pronouns normally
+            // For other actions, remove pronouns normally
             target = target.replaceAll("(?i)^(I|user|we|you|he|she|they|it|this|that)\\s+", "");
         }
         
@@ -498,6 +507,29 @@ public class IntentAnalyzer {
     }
     
     /**
+     * Check if a text looks like a date or relative date keyword
+     */
+    private boolean isDateValue(String text) {
+        String lower = text.toLowerCase().trim();
+        if (lower.equals("today") || lower.equals("tomorrow") || lower.equals("yesterday")) return true;
+        
+        // Matches numeric offsets like "+30", "30 days"
+        if (lower.matches("^[+-]?\\d+(\\s+days?)?(\\s+from\\s+today)?$")) return true;
+        
+        // Matches common date formats (simplistic check)
+        // MM/DD/YYYY, YYYY-MM-DD, Month Day Year
+        if (lower.matches("^\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}$")) return true;
+        if (lower.matches("^\\d{4}[/-]\\d{1,2}[/-]\\d{1,2}$")) return true;
+        
+        String[] months = {"jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"};
+        for (String month : months) {
+            if (lower.contains(month)) return true;
+        }
+        
+        return false;
+    }
+    
+    /**
      * Action type enumeration
      */
     public enum ActionType {
@@ -507,6 +539,8 @@ public class IntentAnalyzer {
         SELECT,
         NAVIGATE,
         WAIT,
+        HOVER,
+        DATE_SET,
         UNKNOWN
     }
 }

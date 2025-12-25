@@ -19,7 +19,7 @@ public class AgentApplication {
         SmartStepParser planner = new SmartStepParser();
         BrowserService browserService = new BrowserService();
 
-        String featurePath = "src/main/resources/features/ProgressBar.feature";
+        String featurePath = "src/main/resources/features/DatePicker.feature";
         List<String> steps = reader.readSteps(featurePath);
 
         browserService.startBrowser();

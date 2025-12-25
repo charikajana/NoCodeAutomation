@@ -109,6 +109,7 @@ public class IntelligentStepProcessor {
                 return clickMatcher.findBestMatch(page, intent);
                 
             case FILL:
+            case DATE_SET:
                 return fillMatcher.findBestMatch(page, intent);
                 
             case SELECT:
@@ -117,21 +118,24 @@ public class IntelligentStepProcessor {
             case VERIFY:
                 return verifyMatcher.findBestMatch(page, intent);
                 
+            case HOVER:
+                // Hover uses same element selection logic as Click
+                return clickMatcher.findBestMatch(page, intent);
+                
             default:
                 logger.warn("No specific matcher for action type: {}", actionType);
                 return null;
         }
     }
     
-    /**
-     * Check if intent requires element matching
-     */
     private boolean needsElementMatch(StepIntent intent) {
         IntentAnalyzer.ActionType action = intent.getActionType();
         return action == IntentAnalyzer.ActionType.CLICK ||
                action == IntentAnalyzer.ActionType.FILL ||
                action == IntentAnalyzer.ActionType.SELECT ||
-               action == IntentAnalyzer.ActionType.VERIFY;
+               action == IntentAnalyzer.ActionType.VERIFY ||
+               action == IntentAnalyzer.ActionType.HOVER ||
+               action == IntentAnalyzer.ActionType.DATE_SET;
     }
     
     /**
@@ -169,6 +173,8 @@ public class IntelligentStepProcessor {
             case SELECT: return "select";
             case NAVIGATE: return "navigate";
             case WAIT: return "wait";
+            case HOVER: return "hover";
+            case DATE_SET: return "set_date";
             default: return "unknown";
         }
     }
@@ -240,7 +246,10 @@ public class IntelligentStepProcessor {
             
             // Window management (bypass for PatternRegistry)
             "switch to", "new window", "new tab", "close window", "close tab", 
-            "window exists", "tab exists", "click and switch", "main window"
+            "window exists", "tab exists", "click and switch", "main window",
+            
+            // Tooltip verification (bypass for PatternRegistry)
+            "tooltip"
         };
         
         for (String keyword : browserKeywords) {

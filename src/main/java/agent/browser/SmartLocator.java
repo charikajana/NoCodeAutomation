@@ -34,18 +34,22 @@ public class SmartLocator {
         return waitForSmartElement(name, type, scope, null);
     }
 
+    public Locator waitForSmartElement(String name, String type, Locator scope, String frameAnchor) {
+        return waitForSmartElement(name, type, scope, frameAnchor, false);
+    }
+
     /**
      * Wait for an element to appear, with optional scope and frame anchor
      */
-    public Locator waitForSmartElement(String name, String type, Locator scope, String frameAnchor) {
+    public Locator waitForSmartElement(String name, String type, Locator scope, String frameAnchor, boolean includeHidden) {
         long deadline = System.currentTimeMillis() + 30000; 
         int maxRetries = 60; 
         int retryCount = 0;
         long lastLogTime = 0;
         
         while (System.currentTimeMillis() < deadline && retryCount < maxRetries) {
-            Locator loc = findSmartElement(name, type, scope, frameAnchor);
-            if (loc != null && loc.isVisible()) {
+            Locator loc = findSmartElement(name, type, scope, frameAnchor, includeHidden);
+            if (loc != null && (includeHidden || loc.isVisible())) {
                 return loc;
             }
             
@@ -87,6 +91,10 @@ public class SmartLocator {
     }
 
     public Locator findSmartElement(String name, String parsedType, Locator scope, String frameAnchor) {
+        return findSmartElement(name, parsedType, scope, frameAnchor, false);
+    }
+
+    public Locator findSmartElement(String name, String parsedType, Locator scope, String frameAnchor, boolean includeHidden) {
         if (name == null) return null;
 
         // INTELLIGENT TYPE EXTRACTION
@@ -144,14 +152,14 @@ public class SmartLocator {
             Frame frame = findFrame(frameAnchor);
             if (frame != null) {
                 logger.debug("Scoping search to iframe: '{}'", frameAnchor);
-                return findInContext(searchName, searchType, frame, null);
+                return findInContext(searchName, searchType, frame, null, includeHidden);
             } else {
                 logger.warning("Target iframe '{}' not found. Searching globally...", frameAnchor);
             }
         }
 
         // 2. Normal search (Scoped or Page)
-        Locator loc = findInContext(searchName, searchType, null, scope);
+        Locator loc = findInContext(searchName, searchType, null, scope, includeHidden);
         if (loc != null) return loc;
 
         // 3. Automatic Frame Traversal: If not found in main page, search all frames
@@ -161,7 +169,7 @@ public class SmartLocator {
                 if (frame == page.mainFrame()) continue; // Already searched
                 if (frame.isDetached()) continue;
                 
-                loc = findInContext(searchName, searchType, frame, null);
+                loc = findInContext(searchName, searchType, frame, null, includeHidden);
                 if (loc != null) {
                     logger.success("Found element '{}' inside iframe: '{}'", searchName, frame.name().isEmpty() ? frame.url() : frame.name());
                     return loc;
@@ -195,16 +203,16 @@ public class SmartLocator {
         return null;
     }
 
-    private Locator findInContext(String name, String parsedType, Frame frame, Locator scope) {
-        logger.analysis("Analyzing DOM context for target: '{}' (Type: {}){}", name, parsedType, (frame != null ? " [Frame]" : (scope != null ? " [Scoped]" : " [Page]")));
+    private Locator findInContext(String name, String parsedType, Frame frame, Locator scope, boolean includeHidden) {
+        logger.analysis("Analyzing DOM context for target: '{}' (Type: {}){}{}", name, parsedType, (frame != null ? " [Frame]" : (scope != null ? " [Scoped]" : " [Page]")), (includeHidden ? " [Include Hidden]" : ""));
 
         List<ElementCandidate> elements;
         if (scope != null) {
-            elements = docScanner.scan(scope);
+            elements = docScanner.scan(scope, includeHidden);
         } else if (frame != null) {
-            elements = docScanner.scan(frame);
+            elements = docScanner.scan(frame, includeHidden);
         } else {
-            elements = docScanner.scan(page);
+            elements = docScanner.scan(page, includeHidden);
         }
 
         double bestScore = 0.0;

@@ -97,6 +97,11 @@ public class CandidateScorer {
                 score += 50;
             }
             // No penalty for click as almost anything can be clicked
+        } else {
+            // General boost for interactive tags even if action type is unknown
+            if ("button".equals(el.tag) || "a".equals(el.tag) || "submit".equals(el.type) || "button".equals(lowerRole)) {
+                score += 10;
+            }
         }
         if (isSlider) {
             if ("range".equals(lowerType) || "slider".equals(lowerRole)) {
@@ -111,6 +116,12 @@ public class CandidateScorer {
             score += 500; // Found exact role
         } else if (el.className.toLowerCase().contains("progress")) {
             score += 100; // Likely a progress component
+        }
+        
+        // ========== TIER 4: VISIBILITY BOOST ==========
+        // Substantial boost for visible elements to prefer them over hidden duplicates (e.g., mobile menus)
+        if (el.visible) {
+            score += 100;
         }
         
         return score;

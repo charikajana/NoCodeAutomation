@@ -16,6 +16,7 @@ import agent.browser.actions.list.*;
 import agent.browser.actions.keyboard.*;
 import agent.browser.actions.scroll.ScrollAction;
 import agent.browser.actions.slider.*;
+import agent.browser.actions.mouse.*;
 import agent.browser.actions.progress.*;
 
 import java.util.HashMap;
@@ -53,6 +54,7 @@ public class ActionHandlerRegistry {
         registerScrollActions();
         registerSliderActions();
         registerProgressActions();
+        registerMouseActions();
         registerUtilityActions();
         registerBrowserLifecycleActions();
     }
@@ -63,6 +65,7 @@ public class ActionHandlerRegistry {
         handlers.put("refresh_page", new RefreshPageAction());
         handlers.put("browser_back", new BackAction());
         handlers.put("browser_forward", new ForwardAction());
+        handlers.put("select_menu", new SelectMenuAction());
     }
     
     private void registerInputActions() {
@@ -71,6 +74,7 @@ public class ActionHandlerRegistry {
         handlers.put("fill_credentials", new FillCredentialsAction());
         handlers.put("fill_form_section", new FillFormSectionAction());
         handlers.put("select_date_relative", new SelectRelativeDateAction());
+        handlers.put("set_date", new SetDateAction());
     }
     
     private void registerClickActions() {
@@ -166,6 +170,11 @@ public class ActionHandlerRegistry {
     
     private void registerProgressActions() {
         handlers.put("wait_for_progress", new WaitForProgressAction());
+    }
+    
+    private void registerMouseActions() {
+        handlers.put("hover", new HoverAction());
+        handlers.put("verify_tooltip", new VerifyTooltipAction());
     }
     
     private void registerUtilityActions() {

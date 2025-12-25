@@ -84,6 +84,17 @@ public class PatternRegistry {
         register.add("select_date_relative", 
             "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*selects?\\s+(.+?)\\s+(\\d+)\\s+days?\\s+from\\s+(today|tomorrow)$", 
             1, 2, -1);
+
+        // Set absolute date
+        // Example: Set "05/20/2026" in "Select Date"
+        register.add("set_date",
+            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:set|select|enter)\\s+(?:the\\s+)?(?:date\\s+)?[\"']([^\"']+)[\"']\\s+(?:in|for|into|to)\\s+(?:the\\s+)?(?:date\\s+picker|field|input)?\\s*[\"']?([^\"']+)[\"']?$",
+            2, 1, -1);
+        
+        // Natural language date: Select date "today" for "Birth Date"
+        register.add("set_date",
+            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:set|select|enter)\\s+(?:the\\s+)?(?:date\\s+)?(?:of\\s+)?(today|tomorrow|yesterday)\\s+(?:in|for|into|to)\\s+(?:the\\s+)?[\"']?([^\"']+)[\"']?$",
+            2, 1, -1);
         
         // ========================================
         // CREDENTIALS PATTERNS (Phase 2)
@@ -455,9 +466,12 @@ public class PatternRegistry {
             "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:fill|enter|type|input|write)\\s+(?:the\\s+)?([\\w\\s\\-]+?)(?:[: ])?\\s+[\"']([^\"']+)[\"']", 
             1, 2, -1);
         
-        // ========================================
-        // DROPDOWN/SELECT PATTERNS
-        // ========================================
+        // Nested Menu Selection
+        // Example: Select "Main Item 2 > SUB SUB LIST > Sub Sub Item 1" from menu
+        register.add("select_menu", 
+            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:select|choose|click|navigate\\s+to|open)\\s+[\"']?([^\"']+)[\"']?\\s+(?:from|in|using|via)\\s+(?:the\\s+)?(?:navigation\\s+|sidebar\\s+|top\\s+)?(?:menu|navbar|nav|menu\\s*bar)$", 
+            -1, 1, -1);
+
         // Multi-value select (MUST BE FIRST): Select "A" and "B" and "C" from "Dropdown"
         register.add("select_multi", 
             "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:select|choose)\\s+[\"']([^\"']+)[\"'](?:\\s+and\\s+[\"'][^\"']+[\"'])+\\s+(?:from|in|for)\\s+(?:the\\s+)?[\"']?([^\"']+)[\"']?", 
@@ -477,6 +491,10 @@ public class PatternRegistry {
             1, 2, -1);
         
         // Deselect patterns (for multiselect dropdowns)
+        register.add("deselect", 
+            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:deselect|remove|unselect|clear)\\s+[\"']([^\"']+)[\"']\\s+(?:from|in|for)\\s+(?:the\\s+)?[\"']?([^\"']+)[\"']?", 
+            2, 1, -1);
+            
         register.add("deselect", 
             "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:deselect|remove|unselect|clear)\\s+[\"']([^\"']+)[\"']\\s+(?:from|in|for)\\s+(?:the\\s+)?[\"']?([^\"']+)[\"']?", 
             2, 1, -1);
@@ -780,6 +798,25 @@ public class PatternRegistry {
             "(?:wait|monitor)\\s+(?:for\\s+)?(?:the\\s+)?" +
             "(.+?)\\s*" +
             "(?:to|until)\\s+(?:reach|at)\\s+" +
+            "[\"']([^\"']+)[\"']",
+            Map.of("elementName", 1, "value", 2));
+        
+        // ========================================
+        // MOUSE ACTIONS / TOOLTIPS
+        // ========================================
+        // Hover: "Hover over the 'Submit' button", "Mouse over 'Profile' icon"
+        register.add("hover",
+            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*" +
+            "(?:hover|mouse\\s*over)\\s+(?:over\\s+)?(?:the\\s+)?" +
+            "[\"']?([^\"']+)[\"']?",
+            Map.of("elementName", 1));
+
+        // Verify Tooltip: "Verify tooltip of 'Button' contains 'You hovered'"
+        register.add("verify_tooltip",
+            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*" +
+            "(?:verify|check)\\s+tooltip\\s+(?:of|for)\\s+" +
+            "[\"']?([^\"']+)[\"']?\\s+" +
+            "(?:contains|is)\\s+" +
             "[\"']([^\"']+)[\"']",
             Map.of("elementName", 1, "value", 2));
         
