@@ -4,45 +4,8 @@ Feature: Comprehensive Dropdown/Select Testing - All Frameworks
     Given Open the browser and go to "https://demoqa.com/select-menu"
     And wait for page load
 
-  Scenario: Test Standard HTML Select Dropdown
-    # Standard <select> element - Uses native selectOption()
-    When Select "Blue" from Old Style Select Menu
-    Then Verify "Blue" is displayed
-    
-    When Select "Green" from Old Style Select Menu
-    Then Verify "Green" is displayed
-    
-    When Select "Purple" from Old Style Select Menu
-    Then Verify "Purple" is displayed
-
-  Scenario: Test React-Select Dropdown with Option Groups
-    # React-Select with grouped options
-    When Select "Group 1, option 1" from Select Value
-    Then Verify "Group 1, option 1" is displayed
-    
-    When Select "Group 2, option 1" from Select Value
-    Then Verify "Group 2, option 1" is displayed
-    
-    When Select "A root option" from Select Value
-    Then Verify "A root option" is displayed
-
-  Scenario: Test React-Select Single Selection Dropdown
-    # React-Select for title selection
-    When Select "Dr." from "Select One"
-    Then Verify "Dr." is displayed
-    
-    When Select "Mr." from "Select One"
-    Then Verify "Mr." is displayed
-    
-    When Select "Mrs." from "Select One"
-    Then Verify "Mrs." is displayed
-    
-    When Select "Prof." from "Select One"
-    Then Verify "Prof." is displayed
-
   Scenario: Test React-Select Multi-Select Dropdown
     # React-Select with multiple selection capability
-    When Select "Green" from Multiselect drop down
     When Select "Green" from Multiselect drop down
     When deselect "Green" from Multiselect drop down
     When Select "Green" and "Blue" and "Black" from Multiselect drop down
@@ -95,3 +58,39 @@ Feature: Comprehensive Dropdown/Select Testing - All Frameworks
     Then Verify "Green" is displayed
     And Verify "Dr." is displayed
     And Verify "Another root option" is displayed
+
+    Scenario: Test Standard HTML Select Dropdown
+    # Standard <select> element - Uses native selectOption()
+    When Select "Blue" from Old Style Select Menu
+    Then Verify "Blue" is displayed
+    
+    When Select "Green" from Old Style Select Menu
+    Then Verify "Green" is displayed
+    
+    When Select "Purple" from Old Style Select Menu
+    Then Verify "Purple" is displayed
+
+  Scenario: Test React-Select Dropdown with Option Groups
+    # React-Select with grouped options
+    When Select "Group 1, option 1" from Select Value
+    Then Verify "Group 1, option 1" is displayed
+    
+    When Select "Group 2, option 1" from Select Value
+    Then Verify "Group 2, option 1" is displayed
+    
+    When Select "A root option" from Select Value
+    Then Verify "A root option" is displayed
+
+  Scenario: Test React-Select Single Selection Dropdown
+    # React-Select for title selection
+    When Select "Dr." from "Select One"
+    Then Verify "Dr." is displayed
+    
+    When Select "Mr." from "Select One"
+    Then Verify "Mr." is displayed
+    
+    When Select "Mrs." from "Select One"
+    Then Verify "Mrs." is displayed
+    
+    When Select "Prof." from "Select One"
+    Then Verify "Prof." is displayed   

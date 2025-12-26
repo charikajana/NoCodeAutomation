@@ -55,8 +55,8 @@ public class ClickSemanticMatcher extends BaseSemanticMatcher {
     private List<ScoredElement> findCandidates(Page page, StepIntent intent) {
         List<ScoredElement> elements = new ArrayList<>();
         
-        // Focus on clickable elements
-        String[] selectors = {"button", "a", "input", "select", "[role='button']", "[onclick]"};
+        // Focus on clickable elements and labels (associated with radio/checkboxes)
+        String[] selectors = {"button", "a", "input", "select", "[role='button']", "[onclick]", "label"};
         
         for (String selector : selectors) {
             try {

@@ -202,16 +202,6 @@ public class PatternRegistry {
             "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:go|navigate|move|browser|click|press)?\\s*(?:browser\\s*)?forward(?:s)?\\s*(?:button|icon)?$", 
             -1, -1, -1);
         
-        // ========================================
-        // GENERAL CLICK PATTERNS (FALLBACK)
-        // ========================================
-        // Click on element: "Click on alertButton", "user Click on submitBtn"
-        // This is a fallback pattern for when intelligence layer fails
-        // Click on element: "Click on alertButton", "user Click on submitBtn"
-        // This is a fallback pattern for when intelligence layer fails
-        register.add("click", 
-            "(?i)^(?:I|user|we|he|she|they)?\\s*(?:click|press|tap)(?:\\s+on)?\\s+(.+?)$", 
-            1, -1, -1);
         
         // Verify validation state: "Verify 'first name' field is invalid", "Verify 'mobile' has red border"
         register.add("verify_validation", 
@@ -492,14 +482,28 @@ public class PatternRegistry {
             "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:set|change)\\s+(?:the\\s+)?(?:dropdown\\s+|select\\s+)?[\"']?([^\"']+)[\"']?\\s+to\\s+[\"']([^\"']+)[\"']", 
             1, 2, -1);
         
+        // ========================================
+        // SELECTABLE LIST PATTERNS (Non-Dropdown)
+        // ========================================
+        // Examples: "Select 'Cras justo odio' from list", "Select multiple items 'One;Two;Three'"
+        register.add("multiselect_item", 
+            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:select|choose)\\s+(?:multiple\\s+items\\s+)?[\"']([^\"']+)[\"'](?:\\s+from\\s+(?:the\\s+)?(?:list|grid))?$", 
+            -1, 1, -1);
+
+        // Verification for selectable lists
+        register.add("verify_selected", 
+            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:validate|verify|check)\\s+(?:that\\s+)?(?:items?\\s+)?[\"']([^\"']+)[\"']\\s+(?:is|are)\\s+selected$", 
+            -1, 1, -1);
+
         // Deselect patterns (for multiselect dropdowns)
         register.add("deselect", 
             "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:deselect|remove|unselect|clear)\\s+[\"']([^\"']+)[\"']\\s+(?:from|in|for)\\s+(?:the\\s+)?[\"']?([^\"']+)[\"']?", 
             2, 1, -1);
-            
-        register.add("deselect", 
-            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:deselect|remove|unselect|clear)\\s+[\"']([^\"']+)[\"']\\s+(?:from|in|for)\\s+(?:the\\s+)?[\"']?([^\"']+)[\"']?", 
-            2, 1, -1);
+
+        // Positive verification with various phrasings
+        register.add("verify", 
+            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:validate|verify|assert|check)\\s+[\"']([^\"']+)[\"']\\s+(?:this\\s+)?(?:text|message|item)\\s+(?:is\\s+)?(?:present|shown|displayed|visible|selected)", 
+            -1, 1, -1);
         
         // ========================================
         // CHECKBOX PATTERNS
@@ -526,6 +530,15 @@ public class PatternRegistry {
         register.add("click", 
             "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:click|tap|press|hit)\\s+(?:on\\s+)?(?:the\\s+)?[\"']?([^\"']+)[\"']?", 
             1, -1, -1);
+
+        // ========================================
+        // GENERAL FALLBACK PATTERNS
+        // (Must be registered LAST to avoid greedy capture of more specific steps)
+        // ========================================
+        // Fallback for click: "Click on anything..."
+        register.add("click", 
+            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:click|press|tap)(?:\\s+on)?\\s+(.+?)$", 
+            1, -1, -1);
     }
     
     /**
@@ -537,6 +550,20 @@ public class PatternRegistry {
      */
     public static void registerTablePatterns(TablePatternRegistrar register) {
         
+        // ========================================
+        // SLIDER / RANGE INPUT (Top Priority in Table Patterns)
+        // ========================================
+        // Set slider value: "Set slider to '75'", "Move Volume to '80'", "Adjust slider '90'"
+        register.add("set_slider",
+            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*" +
+            "(?:set|move|adjust|slide|drag|change)\\s+" +
+            "(?:(?:the|a|an)\\s+)?" +
+            "((?:.+?\\s+)?(?:slider|range|volume|brightness|zoom|percentage|offset|pos|position|level|intensity|value|speed|rate|progress))\\s*" +
+            "(?:slider)?\\s*" +
+            "(?:to|at)\\s+" +
+            "[\"']([^\"']+)[\"']",
+            Map.of("elementName", 1, "value", 2));
+
         // ========================================
         // TABLE STRUCTURE VALIDATION
         // ========================================
@@ -778,29 +805,12 @@ public class PatternRegistry {
         
         // ========================================
         // SLIDER / RANGE INPUT
-        // ========================================
-        // Set slider value: "Set slider to '75'", "Move Volume to '80'", "Adjust brightness to '50'"
-        // Note: Element names are NOT in quotes, only values are in quotes
-        register.add("set_slider",
-            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*" +
-            "(?:set|move|adjust|slide|drag)\\s+" +
-            "(?:(?:the|a|an)\\s+)?" +
-            "(.+?)\\s*" +
-            "(?:slider)?\\s*" +
-            "(?:to|at)\\s+" +
-            "[\"']([^\"']+)[\"']",
-            Map.of("elementName", 1, "value", 2));
-        
-        // ========================================
         // PROGRESS BAR / MONITORING
         // ========================================
-        // Wait for progress: "Wait for progress bar to reach '100%'"
+        // Progress bar verification is still in table patterns
         register.add("wait_for_progress",
             "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*" +
-            "(?:wait|monitor)\\s+(?:for\\s+)?(?:the\\s+)?" +
-            "(.+?)\\s*" +
-            "(?:to|until)\\s+(?:reach|at)\\s+" +
-            "[\"']([^\"']+)[\"']",
+            "(?:wait|pause)(?:\\s+for)?\\s+(?:the\\s+)?(.+?(?:progress|loading))\\s+(?:bar|indicator)?\\s+(?:to\\s+)?(?:reach|be|is)\\s+[\"']([^\"']+)[\"']",
             Map.of("elementName", 1, "value", 2));
         
         // ========================================

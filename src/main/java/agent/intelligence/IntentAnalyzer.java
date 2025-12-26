@@ -49,6 +49,14 @@ public class IntentAnalyzer {
         ACTION_VERBS.put("reject", ActionType.CLICK);
         ACTION_VERBS.put("deny", ActionType.CLICK);
         
+        // ========================================
+        // SCROLL ACTIONS
+        // ========================================
+        ACTION_VERBS.put("scroll", ActionType.SCROLL);
+        ACTION_VERBS.put("move", ActionType.SCROLL);
+        ACTION_VERBS.put("slide", ActionType.SCROLL);
+        ACTION_VERBS.put("swipe", ActionType.SCROLL);
+        
         // Toggle/Switch actions
         ACTION_VERBS.put("toggle", ActionType.CLICK);
         ACTION_VERBS.put("switch", ActionType.CLICK);
@@ -213,17 +221,26 @@ public class IntentAnalyzer {
         intent.setOriginalStep(step);
         intent.setCleanStep(cleanStep);
         
+        // Detect negation BEFORE extracting action type
+        boolean isNegated = detectNegation(cleanStep);
+        intent.setNegated(isNegated);
+        
         // Extract action type
         ActionType actionType = extractActionType(cleanStep);
         intent.setActionType(actionType);
         
-        // Extract target description
-        String target = extractTarget(cleanStep, actionType);
+        // Extract values from quoted strings
+        List<String> values = extractAllValues(cleanStep);
+        intent.setValues(values);
+        
+        // Extract target description - should pass the list of values to exclude them
+        String target = extractTarget(cleanStep, actionType, values);
         intent.setTargetDescription(target);
         
-        // Extract value (for fill/input actions)
-        String value = extractValue(cleanStep);
-        intent.setValue(value);
+        // Set joined value for backward compatibility
+        if (!values.isEmpty()) {
+            intent.setValue(String.join("; ", values));
+        }
         
         // Extract modifiers (spatial, visual, ordinal)
         Map<String, String> modifiers = extractModifiers(cleanStep);
@@ -233,10 +250,36 @@ public class IntentAnalyzer {
         String elementType = extractElementType(cleanStep);
         intent.setElementType(elementType);
         
-        logger.info("Intent: {} → Target='{}' Value='{}' Type='{}'", 
-            actionType, target, value, elementType);
+        logger.info("Intent: {} → Target='{}' Values={} Type='{}'", 
+            actionType, target, values, elementType);
         
         return intent;
+    }
+    
+    /**
+     * Detect if the step contains negation keywords
+     */
+    private boolean detectNegation(String step) {
+        String lowerStep = step.toLowerCase();
+        
+        // Negation patterns for verification/assertion steps
+        String[] negationKeywords = {
+            "not displayed", "not visible", "not shown", "not present",
+            "not exist", "not exists", "not appear", "not appears",
+            "should not", "shouldn't", "must not", "mustn't",
+            "never", "no longer", "doesn't", "don't",
+            "is not", "isn't", "are not", "aren't", "was not", "wasn't",
+            "not be", "cannot", "can't"
+        };
+        
+        for (String negationKeyword : negationKeywords) {
+            if (lowerStep.contains(negationKeyword)) {
+                logger.debug("Detected negation: {}", negationKeyword);
+                return true;
+            }
+        }
+        
+        return false;
     }
     
     /**
@@ -269,7 +312,17 @@ public class IntentAnalyzer {
             }
         }
         
-        // PRIORITY 2: Special handling for ambiguous verbs
+        // PRIORITY 2: Special handling for 'select/choose' with list/grid context
+        // "Select 'X' from list" should be SELECT, not a simple CLICK on a "list" element
+        if (lowerStep.contains("select ") || lowerStep.contains("choose ")) {
+            if (lowerStep.contains("from list") || lowerStep.contains("from grid") || 
+                lowerStep.contains("from the list") || lowerStep.contains("from the grid") ||
+                lowerStep.contains("multiple items")) {
+                return ActionType.SELECT;
+            }
+        }
+        
+        // PRIORITY 3: Special handling for ambiguous verbs
         if (lowerStep.contains("check")) {
             // "check checkbox" OR "check the box" → SELECT
             if (lowerStep.contains("checkbox") || 
@@ -297,21 +350,42 @@ public class IntentAnalyzer {
             }
         }
 
-        // PRIORITY 4: Special handling for 'set' verb (context-sensitive for sliders)
-        if (lowerStep.contains("set ")) {
-            if (lowerStep.contains("slider") || lowerStep.contains("range")) {
-                return ActionType.UNKNOWN;
+        // PRIORITY 4: Special handling for 'set/adjust/move' verb (context-sensitive for sliders)
+        if (lowerStep.contains("set ") || lowerStep.contains("adjust ") || 
+            lowerStep.contains("move ") || lowerStep.contains("slide ") ||
+            lowerStep.contains("drag ")) {
+            if (lowerStep.contains("slider") || lowerStep.contains("range") || 
+                lowerStep.contains("volume") || lowerStep.contains("brightness") ||
+                lowerStep.contains("zoom") || lowerStep.contains("percentage")) {
+                return ActionType.UNKNOWN; // Fallback to specialized legacy SetSliderAction
             }
             // "set date" -> DATE_SET
-            if (lowerStep.contains("date") || lowerStep.contains("picker") || lowerStep.contains("tomorrow") || lowerStep.contains("yesterday")) {
+            if (lowerStep.contains("date") || lowerStep.contains("picker") || 
+                lowerStep.contains("tomorrow") || lowerStep.contains("yesterday")) {
                 return ActionType.DATE_SET;
             }
         }
 
         // PRIORITY 5: Check if the value looks like a date (even if verb is 'enter' or 'fill')
+        // BUT avoid false positives for phone numbers
         String value = extractValue(step);
         if (value != null && isDateValue(value)) {
-            return ActionType.DATE_SET;
+            // Additional context check: If the field name suggests phone/mobile/number, don't treat as date
+            if (!lowerStep.contains("phone") && 
+                !lowerStep.contains("mobile") && 
+                !lowerStep.contains("tel") && 
+                !lowerStep.contains("number") &&
+                !lowerStep.contains("contact")) {
+                return ActionType.DATE_SET;
+            }
+        }
+        
+        // Classification for SELECT / DROPDOWN
+        String targetName = extractTarget(step, ActionType.UNKNOWN).toLowerCase();
+        if (lowerStep.contains("set") || lowerStep.contains("choose") || lowerStep.contains("select") || lowerStep.contains("pick")) {
+            if (targetName.contains("select") || targetName.contains("menu") || targetName.contains("dropdown")) {
+                return ActionType.SELECT;
+            }
         }
         
         // PRIORITY 6: Check for other action verbs (LinkedHashMap maintains insertion order)
@@ -337,28 +411,81 @@ public class IntentAnalyzer {
         return ActionType.CLICK;
     }
     
+    private String extractTarget(String step, ActionType actionType) {
+        return extractTarget(step, actionType, new ArrayList<>());
+    }
+
     /**
      * Extract target element description
      */
-    private String extractTarget(String step, ActionType actionType) {
+    private String extractTarget(String step, ActionType actionType, List<String> valuesToExclude) {
         String target = step;
         
         // Find and remove ONLY the primary action verb that was identified
-        // This prevents removing words like "submit" from "submit button"
         String primaryVerb = findPrimaryActionVerb(step);
         if (primaryVerb != null) {
-            // Remove only the first occurrence of the primary verb
             target = target.replaceFirst("(?i)\\b" + primaryVerb + "\\b", "").trim();
         }
         
-        // For non-FILL/SELECT actions, the quoted content is often the target itself (e.g., click "Submit" button)
-        // For FILL/SELECT, the quoted content is the value, so we remove it from the target
-        if (actionType == ActionType.FILL || actionType == ActionType.SELECT) {
-            target = target.replaceAll("[\"'][^\"']+[\"']", "").trim();
+        // For FILL/SELECT/CLICK, identifying the target name
+        if (actionType != ActionType.UNKNOWN) {
+            // Remove Gherkin keywords
+            target = target.replaceAll("(?i)^(Given|When|Then|And|But|User|I)\\s+", "").trim();
+            
+            // Preposition Pivot: Find the last preposition that likely separates values/verbs from the target
+            // e.g. "Select 'A' and 'B' FROM 'Dropdown'" or "Set value TO 'X'"
+            Pattern pivotPattern = Pattern.compile("(?i)(.*)\\b(from|in|into|of|for|within|on|to|at)\\b\\s+(.+)$");
+            Matcher pivotMatcher = pivotPattern.matcher(target);
+            
+            if (pivotMatcher.find()) {
+                String contextPart = pivotMatcher.group(1);
+                String prep = pivotMatcher.group(2).toLowerCase();
+                String targetPart = pivotMatcher.group(3);
+                
+                // Rule-based target selection
+                if (prep.equals("to") || prep.equals("as") || prep.equals("at")) {
+                    // "Set [TARGET] to [VALUE]" or "Enter [VALUE] at [TARGET]"
+                    // If targetPart is quoted, it's likely the value. So target is contextPart.
+                    if (targetPart.contains("\"") || targetPart.contains("'")) {
+                        target = contextPart;
+                    } else if (contextPart.contains("\"") || contextPart.contains("'")) {
+                        // "Enter [VALUE] as [TARGET]"
+                        target = targetPart;
+                    } else {
+                        target = contextPart;
+                    }
+                } else {
+                    // "Select [VALUE] from [TARGET]"
+                    target = targetPart;
+                }
+                
+                // Clean up any left-over values that were quoted in the target
+                target = target.replaceAll("[\"'][^\"']+[\"']", " ");
+            } else {
+                // If no preposition, remove action verbs and then all but the last quoted string
+                target = target.replaceAll("(?i)\\b(set|select|choose|click|fill|verify|check|type|enter|go to|open)\\b", " ");
+                List<String> quoted = extractAllValues(target);
+                if (quoted.size() >= 1) {
+                    for (int i = 0; i < quoted.size(); i++) {
+                        String q = quoted.get(i);
+                        if (target.trim().endsWith("\"" + q + "\"") || target.trim().endsWith("'" + q + "'")) {
+                             continue;
+                        }
+                        target = target.replaceFirst("[\"']" + Pattern.quote(q) + "[\"']", " ");
+                    }
+                }
+            }
+            
+            // Final cleanup
+            target = target.replaceAll("(?i)\\b(the|a|an|and|also)\\b", " ");
+            target = target.replaceAll("[\"']", " ").replaceAll("\\s+", " ").trim();
         } else {
-            // Strip quotes but keep the text for other actions
+            // For unknown actions, just strip quotes but keep the text
             target = target.replaceAll("[\"']([^\"']+)[\"']", "$1").trim();
         }
+        
+        // Remove trailing "as" keyword (for "Enter First Name as 'value'" syntax)
+        target = target.replaceAll("(?i)\\s+as\\s*$", "").trim();
         
         // Remove container phrases (e.g., "in the left menu", "on the sidebar")
         target = target.replaceAll("(?i)\\b(in|on|within|inside)\\s+(?:the\\s+)?(left\\s+menu|right\\s+menu|sidebar|navbar|header|footer|menu|top\\s+bar|toolbar|main\\s+content)\\b", "").trim();
@@ -372,8 +499,9 @@ public class IntentAnalyzer {
         // For FILL/DATE_SET/VERIFY actions, extract text after "in"/"into"/"for" BEFORE removing pronouns
         // This is critical because pronouns may appear before "in" (e.g., "I in full name")
         if (actionType == ActionType.FILL || actionType == ActionType.DATE_SET || actionType == ActionType.VERIFY) {
-            // Pattern: anything + (in|into|for|of|on) + field_name
-            Pattern inPattern = Pattern.compile("(?i)(.+?)\\s+(in|into|for|of|on|within)\\s+(.+)$");
+            // Pattern: optional_prefix + (in|into|for|of|on) + field_name
+            // Made first group optional with (.+?)? to handle cases like "in Mobile Number" (no prefix)
+            Pattern inPattern = Pattern.compile("(?i)(.+?)?\\s*(in|into|for|of|on|within)\\s+(.+)$");
             Matcher matcher = inPattern.matcher(target);
             if (matcher.find()) {
                 target = matcher.group(3);  // Get text after the preposition
@@ -419,14 +547,23 @@ public class IntentAnalyzer {
      * Extract value from quoted strings
      */
     private String extractValue(String step) {
+        List<String> values = extractAllValues(step);
+        return values.isEmpty() ? null : values.get(0);
+    }
+
+    /**
+     * Extract all values from quoted strings
+     */
+    private List<String> extractAllValues(String step) {
+        List<String> results = new ArrayList<>();
         Pattern pattern = Pattern.compile("[\"']([^\"']+)[\"']");
         Matcher matcher = pattern.matcher(step);
         
-        if (matcher.find()) {
-            return matcher.group(1);
+        while (matcher.find()) {
+            results.add(matcher.group(1));
         }
         
-        return null;
+        return results;
     }
     
     /**
@@ -511,10 +648,19 @@ public class IntentAnalyzer {
      */
     private boolean isDateValue(String text) {
         String lower = text.toLowerCase().trim();
+        
+        // Relative date keywords
         if (lower.equals("today") || lower.equals("tomorrow") || lower.equals("yesterday")) return true;
         
-        // Matches numeric offsets like "+30", "30 days"
-        if (lower.matches("^[+-]?\\d+(\\s+days?)?(\\s+from\\s+today)?$")) return true;
+        // Exclude phone numbers (10 digits, common in many countries)
+        // Phone numbers like "9876543210" should NOT be treated as dates
+        if (text.matches("^\\d{10}$")) return false;
+        
+        // Matches numeric offsets like "+30 days", "5 days from today" (NOT just numbers alone)
+        if (lower.matches("^[+-]?\\d{1,3}\\s+days?(\\s+from\\s+today)?$")) return true;
+        
+        // Pure numbers alone should NOT be treated as dates (they are values/slider positions/offsets)
+        if (lower.matches("^[+-]?\\d+$")) return false;
         
         // Matches common date formats (simplistic check)
         // MM/DD/YYYY, YYYY-MM-DD, Month Day Year
@@ -540,6 +686,7 @@ public class IntentAnalyzer {
         NAVIGATE,
         WAIT,
         HOVER,
+        SCROLL,
         DATE_SET,
         UNKNOWN
     }

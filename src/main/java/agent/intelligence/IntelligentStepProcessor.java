@@ -52,8 +52,29 @@ public class IntelligentStepProcessor {
         }
         
         try {
+            // EXCEPTION: Complex multi-value steps (e.g., Select "A" and "B" from "Dropdown")
+            // These are better handled by the legacy pattern parser which has expert logic for them.
+            if (step.toLowerCase().contains(" and \"") || step.toLowerCase().contains(" and '") ||
+                step.toLowerCase().contains(" also \"") || step.toLowerCase().contains(" also '")) {
+                logger.debug("Complex multi-value step detected - skipping intelligence layer");
+                return false;
+            }
+
+            // EXCEPTION: Deselect actions
+            if (step.toLowerCase().contains("deselect")) {
+                 return false;
+            }
+
             // Try to extract intent
             StepIntent intent = intentAnalyzer.analyzeStep(step);
+            
+            // EXCEPTION: Select actions
+            // The legacy parser has expert logic for native and custom dropdowns
+            // and multi-selects. We prefer that for reliability.
+            if (intent.getActionType() == IntentAnalyzer.ActionType.SELECT) {
+                 logger.debug("Select action detected - deferring to legacy parser for expert handling");
+                 return false;
+            }
             
             // If we got a valid intent (not UNKNOWN), we can process it
             if (intent != null && intent.getActionType() != IntentAnalyzer.ActionType.UNKNOWN) {
@@ -93,7 +114,9 @@ public class IntelligentStepProcessor {
         try {
             // Skip browser-level actions (alerts, prompts, confirms, etc.)
             // These need special handlers, not DOM element matching
-            if (isBrowserLevelAction(step)) {
+            // Also skip deselect actions - they have dedicated DeselectAction handler
+            if (isBrowserLevelAction(step) || step.toLowerCase().contains("deselect") || 
+                step.toLowerCase().contains("remove") || step.toLowerCase().contains("unselect")) {
                 logger.debug("Skipping intelligence layer for browser-level action");
                 return null;  // Let legacy patterns handle it
             }
@@ -101,6 +124,13 @@ public class IntelligentStepProcessor {
             // Step 1: Extract intent
             StepIntent intent = intentAnalyzer.analyzeStep(step);
             logger.debug("Intent extracted: {}", intent);
+            
+            // EXCEPTION: Select actions
+            // The legacy parser has expert logic for native and custom dropdowns
+            if (intent.getActionType() == IntentAnalyzer.ActionType.SELECT) {
+                 logger.debug("Select action detected - deferring to legacy parser");
+                 return null;
+            }
             
             // Step 2: Find element (if page available and element needed)
             Locator element = null;
@@ -146,7 +176,8 @@ public class IntelligentStepProcessor {
                 return verifyMatcher.findBestMatch(page, intent);
                 
             case HOVER:
-                // Hover uses same element selection logic as Click
+            case SCROLL:
+                // Hover and Scroll use same element selection logic as Click
                 return clickMatcher.findBestMatch(page, intent);
                 
             default:
@@ -162,6 +193,7 @@ public class IntelligentStepProcessor {
                action == IntentAnalyzer.ActionType.SELECT ||
                action == IntentAnalyzer.ActionType.VERIFY ||
                action == IntentAnalyzer.ActionType.HOVER ||
+               action == IntentAnalyzer.ActionType.SCROLL ||
                action == IntentAnalyzer.ActionType.DATE_SET;
     }
     
@@ -179,6 +211,9 @@ public class IntelligentStepProcessor {
         // Set element and value
         plan.setElementName(intent.getTargetDescription());
         plan.setValue(intent.getValue());
+        
+        // Set negation flag (for negative assertions like "not displayed")
+        plan.setNegated(intent.isNegated());
         
         // Store found locator if available  
         if (element != null) {
@@ -201,6 +236,7 @@ public class IntelligentStepProcessor {
             case NAVIGATE: return "navigate";
             case WAIT: return "wait";
             case HOVER: return "hover";
+            case SCROLL: return "scroll";
             case DATE_SET: return "set_date";
             default: return "unknown";
         }

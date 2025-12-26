@@ -91,26 +91,28 @@ public class MultiselectAction implements BrowserAction {
                 return false;
             }
             
+            Locator target = item.first();
+
             // Perform click with modifiers if needed
             if (useCtrlKey) {
                 logger.debug("Clicking with Ctrl modifier to add to selection");
-                item.first().click(new Locator.ClickOptions()
+                target.click(new Locator.ClickOptions()
                     .setModifiers(Arrays.asList(KeyboardModifier.CONTROLORMETA)));
             } else {
-                item.first().click();
+                target.click();
             }
             
             // Verify selection
-            page.waitForTimeout(100); // Brief wait for UI update
-            boolean isSelected = isItemSelected(item.first());
+            page.waitForTimeout(500); // Wait longer for UI update
+            boolean isSelected = isItemSelected(target);
             
             if (isSelected) {
                 logger.debug("Item '{}' is now selected", itemText);
+                return true;
             } else {
-                logger.warning("Item '{}' may not be selected (no 'active' class)", itemText);
+                logger.failure("Item '{}' was not selected (no 'active' class found)", itemText);
+                return false;
             }
-            
-            return true;
             
         } catch (Exception e) {
             logger.failure("Error selecting item '{}': {}", itemText, e.getMessage());
@@ -124,12 +126,23 @@ public class MultiselectAction implements BrowserAction {
      */
     private Locator findSelectableItem(Page page, String itemText) {
         // Strategy 1: Look for list items with the exact text
-        Locator byListItem = page.locator("li.list-group-item, [role='listitem']")
+        Locator byListItem = page.locator("li.list-group-item, [role='listitem'], .list-group-item")
             .filter(new Locator.FilterOptions().setHasText(itemText));
         
+        // If multiple found, try to find the one that is NOT a container
+        if (byListItem.count() > 1) {
+            for (int i = 0; i < byListItem.count(); i++) {
+                Locator candidate = byListItem.nth(i);
+                String text = candidate.innerText().trim();
+                if (text.equalsIgnoreCase(itemText)) {
+                    return candidate;
+                }
+            }
+        }
+
         if (byListItem.count() > 0) {
             logger.debug("Found item via list-group-item selector");
-            return byListItem;
+            return byListItem.first();
         }
         
         // Strategy 2: Look for any selectable element (common class patterns)
@@ -138,7 +151,7 @@ public class MultiselectAction implements BrowserAction {
         
         if (bySelectableClass.count() > 0) {
             logger.debug("Found item via selectable class selector");
-            return bySelectableClass;
+            return bySelectableClass.first();
         }
         
         // Strategy 3: Look for any clickable element with the text
@@ -146,7 +159,7 @@ public class MultiselectAction implements BrowserAction {
         
         if (byText.count() > 0) {
             logger.debug("Found item via text selector");
-            return byText;
+            return byText.first();
         }
         
         return null;
@@ -159,8 +172,10 @@ public class MultiselectAction implements BrowserAction {
     private boolean isItemSelected(Locator item) {
         try {
             return (boolean) item.evaluate("(el) => {" +
-                    "  const cl = (el.className || '').toLowerCase().split(/\\s+/);" +
-                    "  return cl.includes('active') || cl.includes('selected') || el.getAttribute('aria-selected') === 'true';" +
+                    "  const cl = el.classList;" +
+                    "  return cl.contains('active') || cl.contains('selected') || " +
+                    "         el.getAttribute('aria-selected') === 'true' || " +
+                    "         el.getAttribute('aria-checked') === 'true';" +
                     "}");
         } catch (Exception e) {
             logger.debug("Could not verify selection state: {}", e.getMessage());

@@ -158,33 +158,63 @@ public class FillSemanticMatcher extends BaseSemanticMatcher {
                 boolean isInputElement = tagName.equals("input") || tagName.equals("textarea") || tagName.equals("select");
                 
                 // CRITICAL: Match field description to element attributes (HIGHEST PRIORITY!)
-                // Priority: 1. ID, 2. Name, 3. Label, 4. Placeholder
+                // Priority: 1. Exact/Full Match, 2. ID, 3. Name, 4. Label, 5. Placeholder
+                
+                String targetLowerNoSpaces = targetLower.replaceAll("\\s+", "");
+                String idLower = id.toLowerCase();
+                String nameLower = name.toLowerCase();
+                String labelLower = associatedLabel != null ? associatedLabel.toLowerCase() : "";
+                String placeholderLower = placeholder.toLowerCase();
+                
+                // HIGHEST PRIORITY: Check for exact/compound matches WITHOUT spaces
+                // This ensures "First Name" -> "firstName" gets highest score, not "lastName"
+                if (idLower.equals(targetLowerNoSpaces) || idLower.replaceAll("[-_]", "").equals(targetLowerNoSpaces)) {
+                    score += 300;  // Exact ID match without spaces (e.g., "firstname" == "firstName")
+                    logger.debug("EXACT ID match '{}' == '{}' - added +300", id, targetDesc);
+                }
+                
+                if (nameLower.equals(targetLowerNoSpaces) || nameLower.replaceAll("[-_]", "").equals(targetLowerNoSpaces)) {
+                    score += 280;  // Exact name match without spaces
+                    logger.debug("EXACT name match '{}' == '{}' - added +280", name, targetDesc);
+                }
+                
+                if (labelLower.equals(targetLower) || labelLower.equals(targetLowerNoSpaces)) {
+                    score += 250;  // Exact label match (with or without spaces)
+                    logger.debug("EXACT label match '{}' == '{}' - added +250", associatedLabel, targetDesc);
+                }
+                
+                if (placeholderLower.equals(targetLower) || placeholderLower.equals(targetLowerNoSpaces)) {
+                    score += 240;  // Exact placeholder match (with or without spaces)
+                    logger.debug("EXACT placeholder match '{}' == '{}' - added +240", placeholder, targetDesc);
+                }
+                
+                // SECONDARY: Word-by-word matching (only if no exact match found)
                 String[] targetWords = targetLower.split("\\s+");
                 for (String word : targetWords) {
                     if (word.equals("field")) continue;  // Skip the word "field"
                     
-                    // Check if ID contains this word (HIGHEST PRIORITY)
-                    if (id.toLowerCase().contains(word)) {
-                        score += 120;  // HIGHEST boost for ID match
-                        logger.debug("ID '{}' contains target word '{}' - added +120", id, word);
+                    // Check if ID contains this word (HIGH PRIORITY but less than exact match)
+                    if (idLower.contains(word)) {
+                        score += 60;  // Reduced from 120 - word match is weaker than exact match
+                        logger.debug("ID '{}' contains target word '{}' - added +60", id, word);
                     }
                     
-                    // Check if name contains this word (SECOND PRIORITY)
-                    if (name.toLowerCase().contains(word)) {
-                        score += 100;  // High boost for name match
-                        logger.debug("Name '{}' contains target word '{}' - added +100", name, word);
+                    // Check if name contains this word
+                    if (nameLower.contains(word)) {
+                        score += 50;  // Reduced from 100
+                        logger.debug("Name '{}' contains target word '{}' - added +50", name, word);
                     }
                     
-                    // Check if associated label contains this word (THIRD PRIORITY)
-                    if (associatedLabel != null && associatedLabel.toLowerCase().contains(word)) {
-                        score += 90;  // Good boost for label match
-                        logger.debug("Label '{}' contains target word '{}' - added +90", associatedLabel, word);
+                    // Check if associated label contains this word
+                    if (!labelLower.isEmpty() && labelLower.contains(word)) {
+                        score += 45;  // Reduced from 90
+                        logger.debug("Label '{}' contains target word '{}' - added +45", labelLower, word);
                     }
                     
-                    // Check if placeholder contains this word (FOURTH PRIORITY)
-                    if (placeholder.toLowerCase().contains(word)) {
-                        score += 80;  // Decent boost for placeholder match
-                        logger.debug("Placeholder '{}' contains target word '{}' - added +80", placeholder, word);
+                    // Check if placeholder contains this word
+                    if (placeholderLower.contains(word)) {
+                        score += 40;  // Reduced from 80
+                        logger.debug("Placeholder '{}' contains target word '{}' - added +40", placeholder, word);
                     }
                 }
                 
