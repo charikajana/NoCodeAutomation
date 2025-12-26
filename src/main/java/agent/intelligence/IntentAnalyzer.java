@@ -486,6 +486,8 @@ public class IntentAnalyzer {
         
         // Remove trailing "as" keyword (for "Enter First Name as 'value'" syntax)
         target = target.replaceAll("(?i)\\s+as\\s*$", "").trim();
+        // Also remove "as" + everything after it (handles "First Name as Doe" after value extraction)
+        target = target.replaceAll("(?i)\\s+as\\s+.*$", "").trim();
         
         // Remove container phrases (e.g., "in the left menu", "on the sidebar")
         target = target.replaceAll("(?i)\\b(in|on|within|inside)\\s+(?:the\\s+)?(left\\s+menu|right\\s+menu|sidebar|navbar|header|footer|menu|top\\s+bar|toolbar|main\\s+content)\\b", "").trim();
