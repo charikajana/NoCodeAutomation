@@ -52,11 +52,22 @@ public class IntelligentStepProcessor {
         }
         
         try {
-            // EXCEPTION: Complex multi-value steps (e.g., Select "A" and "B" from "Dropdown")
-            // These are better handled by the legacy pattern parser which has expert logic for them.
-            if (step.toLowerCase().contains(" and \"") || step.toLowerCase().contains(" and '") ||
-                step.toLowerCase().contains(" also \"") || step.toLowerCase().contains(" also '")) {
-                logger.debug("Complex multi-value step detected - skipping intelligence layer");
+            // EXCEPTION: Composite actions with multiple quoted values
+            // Count quoted strings - if we have multiple quoted values AND conjunctions, it's likely composite
+            int quoteCount = 0;
+            boolean inQuote = false;
+            for (char c : step.toCharArray()) {
+                if (c == '"') {
+                    if (!inQuote) quoteCount++;
+                    inQuote = !inQuote;
+                }
+            }
+            
+            // If we have 2+ quoted values and "and/also/then/,", it's likely a composite action
+            String lowerStep = step.toLowerCase();
+            if (quoteCount >= 2 && (lowerStep.contains(" and ") || lowerStep.contains(" also ") || 
+                                     lowerStep.contains(" then ") || lowerStep.contains(","))) {
+                logger.debug("Composite action detected ({} quoted values) - skipping intelligence layer", quoteCount);
                 return false;
             }
 

@@ -185,12 +185,24 @@ public class SelectAction implements BrowserAction {
             // Step 1: Open dropdown (only if not already open)
             if (isFirstSelection) {
                 try {
-                    // Check if menu is already open
-                    Locator existingMenu = wrapper.locator("[class*='menu'], [class*='css-'][class*='-menu']").first();
-                    boolean menuAlreadyOpen = existingMenu.count() > 0 && existingMenu.isVisible();
+                    // PRE-FLIGHT: Check if autocomplete suggestions already visible (from previous Enter step)
+                    Locator visibleSuggestions = page.locator("[id*='react-select'][id*='option'], div[class*='option'], [role='option']");
+                    boolean suggestionsAlreadyVisible = false;
+                    try {
+                        visibleSuggestions.first().waitFor(new Locator.WaitForOptions().setTimeout(500).setState(com.microsoft.playwright.options.WaitForSelectorState.VISIBLE));
+                        if (visibleSuggestions.count() > 0) {
+                            logger.info("✓ Autocomplete suggestions already visible (count={}), skipping click/type", visibleSuggestions.count());
+                            suggestionsAlreadyVisible = true;
+                        }
+                    } catch (Exception ignored) {}
                     
-                    if (menuAlreadyOpen) {
-                        logger.debug("Menu is already open, skipping click");
+                    if (!suggestionsAlreadyVisible) {
+                        // Check if menu is already open
+                        Locator existingMenu = wrapper.locator("[class*='menu'], [class*='css-'][class*='-menu']").first();
+                        boolean menuAlreadyOpen = existingMenu.count() > 0 && existingMenu.isVisible();
+                        
+                        if (menuAlreadyOpen) {
+                            logger.debug("Menu is already open, skipping click");
                     } else {
                         // Try clicking the control div specifically for React-Select
                         Locator control = wrapper.locator("[class*='control'], [class*='css-'][class*='-control']").first();
@@ -231,6 +243,7 @@ public class SelectAction implements BrowserAction {
                             }
                         }
                     }
+                    } // Close: if (!suggestionsAlreadyVisible)
                 } catch (Exception e) {
                     logger.warning("Failed to open dropdown or menu didn't appear: {}", e.getMessage());
                     logger.debug("Attempting to search for option anyway...");

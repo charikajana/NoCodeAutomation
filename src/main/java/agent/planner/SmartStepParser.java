@@ -148,7 +148,15 @@ public class SmartStepParser {
         logger.section("PARSING STEP");
         logger.info("Step: {}", step);
         
-        // STRATEGY 0: INTELLIGENT NLP-BASED PROCESSING (Phase 4)
+        // STRATEGY 0: Check if this is a combined action step FIRST (before intelligence layer)
+        // This prevents the intelligence layer from incorrectly concatenating values
+        if (isCombinedAction(step)) {
+            logger.debug("→ Composite Action Detected - Bypassing Intelligence Layer");
+            logger.info("Detected Combined Action Step");
+            return parseCombinedActions(step, page, smartLocator);
+        }
+        
+        // STRATEGY 1: INTELLIGENT NLP-BASED PROCESSING (Phase 4)
         if (intelligenceEnabled) {
             logger.debug("→ Trying: Intelligent NLP Processing");
             ActionPlan intelligentPlan = intelligentProcessor.processStep(step, page, smartLocator);
@@ -160,13 +168,6 @@ public class SmartStepParser {
             logger.debug("  ✗ Intelligence layer did not match");
         }
         
-        // STRATEGY 1: Check if this is a combined action step (contains multiple actions)
-        if (isCombinedAction(step)) {
-            logger.debug("→ Trying: Combined Action Detection");
-            logger.info("Detected Combined Action Step");
-            return parseCombinedActions(step, page, smartLocator);
-        }
-
         // STRATEGY 2: Check for frame-scoped actions ("In iframe 'x', click 'y'")
         logger.debug("→ Trying: Frame-Scoped Actions");
         ActionPlan frameScopedPlan = tryFrameScoping(step);
@@ -362,23 +363,34 @@ public class SmartStepParser {
     private List<String> splitByDelimiters(String step) {
         List<String> parts = new ArrayList<>();
         
+        logger.debug("⚙️ COMPOSITE SPLIT INPUT: '{}'", step);
+        
         // Split by common delimiters, but be smart about quotes
         // Use a regex that matches delimiters outside of quotes
         String delimiterRegex = "\\s+(?:and|also|then|,|&)\\s+(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)";
         
         String[] rawParts = step.split(delimiterRegex);
         
+        logger.debug("⚙️ REGEX SPLIT INTO {} RAW PARTS", rawParts.length);
+        for (int i = 0; i < rawParts.length; i++) {
+            logger.debug("  Raw Part {}: '{}'", i, rawParts[i]);
+        }
+        
         for (String part : rawParts) {
             String trimmed = part.trim();
             if (!trimmed.isEmpty()) {
                 parts.add(trimmed);
+                logger.debug("✓ Added trimmed part: '{}'", trimmed);
             }
         }
         
         // If no split occurred, return the original step as a single action
         if (parts.isEmpty()) {
             parts.add(step);
+            logger.debug("⚠️ No splits occurred, returning original step");
         }
+        
+        logger.debug("⚙️ FINAL SPLIT RESULT: {} parts", parts.size());
         
         return parts;
     }
