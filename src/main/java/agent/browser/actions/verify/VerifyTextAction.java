@@ -17,13 +17,18 @@ public class VerifyTextAction implements BrowserAction {
         String value = plan.getValue();
         String targetName = plan.getElementName();
         String textToVerify = (value != null && !value.isEmpty()) ? value : targetName;
+        boolean isNegated = plan.isNegated();
         
         if (textToVerify == null) {
             logger.failure("Verification failed - No text specified");
             return false;
         }
 
-        logger.debug("Verifying text presence: {}", textToVerify);
+        if (isNegated) {
+            logger.debug("Verifying text ABSENCE (negative): {}", textToVerify);
+        } else {
+            logger.debug("Verifying text presence: {}", textToVerify);
+        }
         
         // Determine search scope once
         Locator searchScope = null;
@@ -46,12 +51,36 @@ public class VerifyTextAction implements BrowserAction {
             if (frameAnchor != null) {
                 com.microsoft.playwright.Frame frame = locator.findFrame(frameAnchor);
                 if (frame != null) {
-                    if (performVerification(frame, null, textToVerify)) return true;
+                    boolean found = performVerification(frame, null, textToVerify);
+                    if (isNegated) {
+                        // For negative verification, we want NOT found
+                        if (!found) {
+                            logger.section("VALIDATION SUCCESS (Negative)");
+                            logger.info(" Expected: Text '{}' should NOT be present", textToVerify);
+                            logger.info(" Result: Text not found (as expected)");
+                            logger.info("--------------------------------------------------");
+                            return true;
+                        }
+                    } else {
+                        if (found) return true;
+                    }
                 }
             }
 
             // 2. Standard verification (Main Page or Scope)
-            if (performVerification(page, searchScope, textToVerify)) return true;
+            boolean found = performVerification(page, searchScope, textToVerify);
+            if (isNegated) {
+                // For negative verification, we want NOT found
+                if (!found) {
+                    logger.section("VALIDATION SUCCESS (Negative)");
+                    logger.info(" Expected: Text '{}' should NOT be present", textToVerify);
+                    logger.info(" Result: Text not found (as expected)");
+                    logger.info("--------------------------------------------------");
+                    return true;
+                }
+            } else {
+                if (found) return true;
+            }
 
             // 3. Automatic Cross-Frame verification fallback
             if (searchScope == null) {
@@ -61,9 +90,20 @@ public class VerifyTextAction implements BrowserAction {
                         if (frame.isDetached()) continue;
                         
                         try {
-                            if (performVerification(frame, null, textToVerify)) {
-                                logger.success("Found text '{}' inside iframe: '{}'", textToVerify, frame.name().isEmpty() ? frame.url() : frame.name());
-                                return true;
+                            found = performVerification(frame, null, textToVerify);
+                            if (isNegated) {
+                                if (!found) {
+                                    logger.section("VALIDATION SUCCESS (Negative)");
+                                    logger.info(" Expected: Text '{}' should NOT be present", textToVerify);
+                                    logger.info(" Result: Text not found (as expected)");
+                                    logger.info("--------------------------------------------------");
+                                    return true;
+                                }
+                            } else {
+                                if (found) {
+                                    logger.success("Found text '{}' inside iframe: '{}'", textToVerify, frame.name().isEmpty() ? frame.url() : frame.name());
+                                    return true;
+                                }
                             }
                         } catch (Exception e) {
                             // Ignore errors for specific frame verification (e.g. detached during check)
@@ -84,7 +124,13 @@ public class VerifyTextAction implements BrowserAction {
             }
         }
 
-        logger.failure("Verification timed out: Text '{}' not found after 10 seconds", textToVerify);
+        if (isNegated) {
+            // Negative verification failed - text WAS found when it shouldn't be
+            logger.failure("Negative verification failed: Text '{}' WAS found (should NOT be present)", textToVerify);
+        } else {
+            // Positive verification failed - text NOT found
+            logger.failure("Verification timed out: Text '{}' not found after 10 seconds", textToVerify);
+        }
         return false;
     }
 

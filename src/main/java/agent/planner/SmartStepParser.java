@@ -148,7 +148,15 @@ public class SmartStepParser {
         logger.section("PARSING STEP");
         logger.info("Step: {}", step);
         
-        // STRATEGY 0: INTELLIGENT NLP-BASED PROCESSING (Phase 4)
+        // STRATEGY 0: Check if this is a combined action step FIRST (before intelligence layer)
+        // This prevents the intelligence layer from incorrectly concatenating values
+        if (isCombinedAction(step)) {
+            logger.debug("→ Composite Action Detected - Bypassing Intelligence Layer");
+            logger.info("Detected Combined Action Step");
+            return parseCombinedActions(step, page, smartLocator);
+        }
+        
+        // STRATEGY 1: INTELLIGENT NLP-BASED PROCESSING (Phase 4)
         if (intelligenceEnabled) {
             logger.debug("→ Trying: Intelligent NLP Processing");
             ActionPlan intelligentPlan = intelligentProcessor.processStep(step, page, smartLocator);
@@ -160,13 +168,6 @@ public class SmartStepParser {
             logger.debug("  ✗ Intelligence layer did not match");
         }
         
-        // STRATEGY 1: Check if this is a combined action step (contains multiple actions)
-        if (isCombinedAction(step)) {
-            logger.debug("→ Trying: Combined Action Detection");
-            logger.info("Detected Combined Action Step");
-            return parseCombinedActions(step);
-        }
-
         // STRATEGY 2: Check for frame-scoped actions ("In iframe 'x', click 'y'")
         logger.debug("→ Trying: Frame-Scoped Actions");
         ActionPlan frameScopedPlan = tryFrameScoping(step);
@@ -235,10 +236,25 @@ public class SmartStepParser {
      * - "When Enter FirstName and Enter LastName"
      * - "When Enter FirstName also Enter LastName also Enter Email"
      * - "When Enter FirstName, Enter LastName, Enter Email"
+     * 
+     * BUT NOT multi-value selects like:
+     * - "Select "A" and "B" and "C" from dropdown" (this is a single action with multiple values)
      */
     private boolean isCombinedAction(String step) {
         // Remove Gherkin keywords to analyze the actual step content
         String cleanStep = step.replaceAll("^(?i)(Given|When|Then|And|But)\\s+", "");
+        
+        // FIRST: Check if this is a multi-value select pattern
+        // Pattern: Select "value1" and "value2" and "value3" from "dropdown"
+        // This should NOT be treated as a combined action
+        Pattern multiSelectPattern = Pattern.compile(
+            "(?i)^(?:select|choose)\\s+[\"']([^\"']+)[\"'](?:\\s+and\\s+[\"'][^\"']+[\"'])+\\s+(?:from|in|for)\\s+",
+            Pattern.CASE_INSENSITIVE
+        );
+        if (multiSelectPattern.matcher(cleanStep).find()) {
+            logger.debug("Multi-value select detected - NOT a combined action");
+            return false;
+        }
         
         // Define action-related keywords that indicate this is an action step
         // (not a table verification or other complex step)
@@ -287,7 +303,7 @@ public class SmartStepParser {
      * 
      * Returns a CompositeActionPlan containing all sub-actions.
      */
-    private ActionPlan parseCombinedActions(String step) {
+    private ActionPlan parseCombinedActions(String step, Page page, agent.browser.SmartLocator smartLocator) {
         // Extract the Gherkin keyword (Given/When/Then/And)
         String gherkinKeyword = "";
         Pattern keywordPattern = Pattern.compile("^(Given|When|Then|And|But)\\s+", Pattern.CASE_INSENSITIVE);
@@ -305,6 +321,9 @@ public class SmartStepParser {
         List<String> subActions = splitByDelimiters(cleanStep);
         
         logger.info("Split into {} sub-actions", subActions.size());
+        for (int i = 0; i < subActions.size(); i++) {
+            logger.debug("  Sub-action {}: '{}'", i + 1, subActions.get(i));
+        }
         
         List<ActionPlan> parsedActions = new ArrayList<>();
         
@@ -318,9 +337,8 @@ public class SmartStepParser {
             
             logger.debug("  {}. {}", (i + 1), subAction);
             
-            // Recursively parse each sub-action (this will hit the other strategies)
-            // Temporarily disable combined action detection to avoid infinite recursion
-            ActionPlan subPlan = parseSingleAction(fullSubAction);
+            // Recursively parse each sub-action WITH page context for intelligent matching
+            ActionPlan subPlan = parseSingleAction(fullSubAction, page, smartLocator);
             
             if (subPlan != null && !"unknown".equals(subPlan.getActionType())) {
                 parsedActions.add(subPlan);
@@ -345,23 +363,34 @@ public class SmartStepParser {
     private List<String> splitByDelimiters(String step) {
         List<String> parts = new ArrayList<>();
         
+        logger.debug("⚙️ COMPOSITE SPLIT INPUT: '{}'", step);
+        
         // Split by common delimiters, but be smart about quotes
         // Use a regex that matches delimiters outside of quotes
         String delimiterRegex = "\\s+(?:and|also|then|,|&)\\s+(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)";
         
         String[] rawParts = step.split(delimiterRegex);
         
+        logger.debug("⚙️ REGEX SPLIT INTO {} RAW PARTS", rawParts.length);
+        for (int i = 0; i < rawParts.length; i++) {
+            logger.debug("  Raw Part {}: '{}'", i, rawParts[i]);
+        }
+        
         for (String part : rawParts) {
             String trimmed = part.trim();
             if (!trimmed.isEmpty()) {
                 parts.add(trimmed);
+                logger.debug("✓ Added trimmed part: '{}'", trimmed);
             }
         }
         
         // If no split occurred, return the original step as a single action
         if (parts.isEmpty()) {
             parts.add(step);
+            logger.debug("⚠️ No splits occurred, returning original step");
         }
+        
+        logger.debug("⚙️ FINAL SPLIT RESULT: {} parts", parts.size());
         
         return parts;
     }
@@ -370,7 +399,15 @@ public class SmartStepParser {
      * Parse a single action without checking for combined actions.
      * This prevents infinite recursion when parsing sub-actions.
      */
-    private ActionPlan parseSingleAction(String step) {
+    private ActionPlan parseSingleAction(String step, Page page, agent.browser.SmartLocator smartLocator) {
+        // Try intelligence layer first (Phase 4) WITH page context for semantic matching!
+        if (intelligenceEnabled) {
+            ActionPlan intelligentPlan = intelligentProcessor.processStep(step, page, smartLocator);
+            if (intelligentPlan != null && intelligentPlan.isValid()) {
+                return intelligentPlan;
+            }
+        }
+        
         // Try table patterns
         ActionPlan tablePlan = tryTablePatterns(step);
         if (tablePlan != null) {

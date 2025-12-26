@@ -37,7 +37,7 @@ public class DomScanner {
     private List<ElementCandidate> scanInternal(Page page, Frame frame, Locator scope, boolean includeHidden) {
         String js = "includeHidden => root => {" +
                 "  const base = root || document;" +
-                "  const candidates = Array.from(base.querySelectorAll('button, a, input, textarea, select, [role=\"button\"], label, li, span, div, p, h1, h2, h3, h4, h5, h6'));" +
+                "  const candidates = Array.from(base.querySelectorAll('button, a, input, textarea, select, [role=\"button\"], label, li, span, div, p, h1, h2, h3, h4, h5, h6, b, strong, i, em'));" +
                 "  return candidates.map(el => {" +
                 "    const rect = el.getBoundingClientRect();" +
                 "    const hasDimension = rect.width > 0 && rect.height > 0;" +

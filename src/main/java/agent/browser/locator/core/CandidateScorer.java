@@ -33,8 +33,13 @@ public class CandidateScorer {
         String lowerType = el.type.toLowerCase();
         
         // ========== TIER 1: EXACT MATCHES (140-150 points) ==========
+        // Clean text for comparison (no newlines/tabs)
+        String cleanElText = text.replaceAll("\\s+", " ").trim().toLowerCase();
+        String cleanTarget = name.replaceAll("\\s+", " ").trim().toLowerCase();
+        String cleanTargetCleaned = cleanName.replaceAll("\\s+", " ").trim().toLowerCase();
+        
         boolean matchedExact = false;
-        if (name.equalsIgnoreCase(text) || cleanName.equalsIgnoreCase(lowerText)) {
+        if (cleanTarget.equals(cleanElText) || cleanTargetCleaned.equals(cleanElText)) {
             score += 150;
             matchedExact = true;
         } else if (name.equalsIgnoreCase(el.label) || cleanName.equalsIgnoreCase(lowerLabel)) {
@@ -46,6 +51,14 @@ public class CandidateScorer {
         } else if (name.equalsIgnoreCase(el.title) || cleanName.equalsIgnoreCase(lowerTitle)) {
             score += 140;
             matchedExact = true;
+        }
+        
+        // Boost for specific indicator tags when looking for form elements
+        if (isFill || "select".equals(parsedType) || isSlider) {
+            String tag = el.tag.toLowerCase();
+            if (tag.equals("label") || tag.equals("b") || tag.equals("strong") || tag.equals("p") || tag.equals("span")) {
+                score += 30; // Boost label-like elements
+            }
         }
         
         // ========== TIER 2: BIDIRECTIONAL CONTAINS (100-120 points) ==========
@@ -118,10 +131,15 @@ public class CandidateScorer {
             score += 100; // Likely a progress component
         }
         
-        // ========== TIER 4: VISIBILITY BOOST ==========
-        // Substantial boost for visible elements to prefer them over hidden duplicates (e.g., mobile menus)
+        // ========== TIER 4: VISIBILITY BOOST AND LENGTH PENALTY ==========
+        // Substantial boost for visible elements to prefer them over hidden duplicates
         if (el.visible) {
             score += 100;
+        }
+        
+        // Penalty for giant containers (too much text compared to target)
+        if (text.length() > 100 && text.length() > name.length() * 5) {
+            score -= 150; // Heavy penalty for "giant" containers like root div
         }
         
         return score;

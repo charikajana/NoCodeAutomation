@@ -122,28 +122,48 @@ public class SelectAction implements BrowserAction {
         }
     }
 
-    /**
-     * Handle native HTML <select> element (simplest case)
-     */
     private boolean handleNativeSelect(Locator select, String optionText, String label) {
         try {
-            logger.debug("Native <select> detected");
+            logger.debug("Native <select> detected for '{}'. Using JS-First additive selection.", label);
             
-            // Try by label first
-            java.util.List<String> result = select.selectOption(new SelectOption().setLabel(optionText));
-            
-            if (result.size() > 0) {
-                logger.success("Selected '{}' from dropdown '{}'", optionText, label);
+            // Use Javascript to find and select the option additive-ly (for multi-select)
+            // This bypasses visibility checks and ensures we can select even if hidden/styled over.
+            boolean success = (boolean) select.evaluate("(el, text) => {\n" +
+                "    const lowerText = text.toLowerCase();\n" +
+                "    const isMultiple = el.multiple;\n" +
+                "    let found = false;\n" +
+                "    \n" +
+                "    for (let i = 0; i < el.options.length; i++) {\n" +
+                "        const opt = el.options[i];\n" +
+                "        if (opt.text.toLowerCase() === lowerText || opt.value.toLowerCase() === lowerText) {\n" +
+                "            opt.selected = true; // Add to selection\n" +
+                "            found = true;\n" +
+                "            if (!isMultiple) break; // If not multi-select, we're done\n" +
+                "        }\n" +
+                "    }\n" +
+                "    \n" +
+                "    if (found) {\n" +
+                "        // Dispatch events so the page logic reacts to the change\n" +
+                "        el.dispatchEvent(new Event('change', { bubbles: true }));\n" +
+                "        el.dispatchEvent(new Event('input', { bubbles: true }));\n" +
+                "    }\n" +
+                "    return found;\n" +
+                "}", optionText);
+
+            if (success) {
+                logger.success("Selected '{}' (via JS) from dropdown '{}'", optionText, label);
                 return true;
             }
-            
-            // Fallback to value
-            result = select.selectOption(new SelectOption().setValue(optionText));
-            if (result.size() > 0) {
-                logger.success("Selected '{}' (by value) from dropdown '{}'", optionText, label);
+
+            // Fallback to Playwright's selectOption with a very short timeout just in case
+            try {
+                select.selectOption(new SelectOption().setLabel(optionText), new Locator.SelectOptionOptions().setTimeout(2000));
+                logger.success("Selected '{}' (via Playwright) from dropdown '{}'", optionText, label);
                 return true;
+            } catch (Exception e) {
+                logger.debug("Playwright fallback also failed: {}", e.getMessage());
             }
-            
+
             logger.failure("Option '{}' not found in dropdown '{}'", optionText, label);
             return false;
             
@@ -162,21 +182,27 @@ public class SelectAction implements BrowserAction {
         try {
             logger.debug("Custom dropdown detected");
             
-            // Get the wrapper's ID or class to scope our searches
-            String wrapperId = (String) wrapper.evaluate("el => el.id || ''");
-            String wrapperClass = (String) wrapper.evaluate("el => el.className || ''");
-            
-            logger.debug("Wrapper ID: '{}', Class: '{}'", wrapperId, wrapperClass);
-            
             // Step 1: Open dropdown (only if not already open)
             if (isFirstSelection) {
                 try {
-                    // Check if menu is already open (might be open from previous actions like deselect)
-                    Locator existingMenu = wrapper.locator("[class*='menu']").first();
-                    boolean menuAlreadyOpen = existingMenu.count() > 0 && existingMenu.isVisible();
+                    // PRE-FLIGHT: Check if autocomplete suggestions already visible (from previous Enter step)
+                    Locator visibleSuggestions = page.locator("[id*='react-select'][id*='option'], div[class*='option'], [role='option']");
+                    boolean suggestionsAlreadyVisible = false;
+                    try {
+                        visibleSuggestions.first().waitFor(new Locator.WaitForOptions().setTimeout(500).setState(com.microsoft.playwright.options.WaitForSelectorState.VISIBLE));
+                        if (visibleSuggestions.count() > 0) {
+                            logger.info("✓ Autocomplete suggestions already visible (count={}), skipping click/type", visibleSuggestions.count());
+                            suggestionsAlreadyVisible = true;
+                        }
+                    } catch (Exception ignored) {}
                     
-                    if (menuAlreadyOpen) {
-                        logger.debug("Menu is already open, skipping click");
+                    if (!suggestionsAlreadyVisible) {
+                        // Check if menu is already open
+                        Locator existingMenu = wrapper.locator("[class*='menu'], [class*='css-'][class*='-menu']").first();
+                        boolean menuAlreadyOpen = existingMenu.count() > 0 && existingMenu.isVisible();
+                        
+                        if (menuAlreadyOpen) {
+                            logger.debug("Menu is already open, skipping click");
                     } else {
                         // Try clicking the control div specifically for React-Select
                         Locator control = wrapper.locator("[class*='control'], [class*='css-'][class*='-control']").first();
@@ -192,31 +218,42 @@ public class SelectAction implements BrowserAction {
                         Thread.sleep(500); // Wait for animation
                         
                         // Wait for menu container to appear
-                        Locator menu = wrapper.locator("[class*='menu']").first();
+                        Locator menu = wrapper.locator("[class*='menu'], [class*='css-'][class*='-menu']").first();
+                        
                         if (menu.count() > 0) {
                             menu.waitFor(new Locator.WaitForOptions().setTimeout(5000));
                             logger.debug("Dropdown menu container appeared");
                         } else {
-                            // Fallback: wait for any option elements to appear
-                            logger.debug("No menu container found, waiting for options");
-                            page.locator("[id*='react-select'][id*='option'], div[class*='option'], [role='option']")
-                                .first()
-                                .waitFor(new Locator.WaitForOptions().setTimeout(5000).setState(com.microsoft.playwright.options.WaitForSelectorState.VISIBLE));
-                            logger.debug("Options appeared");
+                            // FALLBACK: If no menu container, maybe it's a searchable dropdown that needs typing
+                            logger.debug("No menu container found, checking for nested input to type into...");
+                            Locator nestedInput = wrapper.locator("input").first();
+                            if (nestedInput.count() > 0) { // Removed isVisible() as RS inputs can be technically hidden but interactive
+                                logger.info("  Searchable dropdown detected. Typing '{}' to trigger suggestions...", optionText);
+                                nestedInput.click(new Locator.ClickOptions().setForce(true));
+                                nestedInput.fill("");
+                                Thread.sleep(300);
+                                nestedInput.pressSequentially(optionText, new Locator.PressSequentiallyOptions().setDelay(100));
+                                Thread.sleep(1200); // Wait for suggestions to filter
+                            } else {
+                                logger.debug("No input found, waiting for any options to appear...");
+                                page.locator("[id*='react-select'][id*='option'], div[class*='option'], [role='option']")
+                                    .first()
+                                    .waitFor(new Locator.WaitForOptions().setTimeout(5000).setState(com.microsoft.playwright.options.WaitForSelectorState.VISIBLE));
+                                logger.debug("Options appeared");
+                            }
                         }
                     }
-                    
+                    } // Close: if (!suggestionsAlreadyVisible)
                 } catch (Exception e) {
                     logger.warning("Failed to open dropdown or menu didn't appear: {}", e.getMessage());
-                    logger.warning("Attempting to continue anyway");
-                    // Don't fail immediately, try to find options anyway
+                    logger.debug("Attempting to search for option anyway...");
                 }
             } else {
                 logger.debug("Multiselect menu already open, skipping click");
                 Thread.sleep(300); // Small delay for stability
             }
             
-            // Step 2: Find and click the option (same logic for all selections)
+            // Step 2: Find and click the option
             return selectOptionFromOpenMenu(page, optionText, label);
             
         } catch (Exception e) {
@@ -500,42 +537,97 @@ public class SelectAction implements BrowserAction {
     
     /**
      * Detect if this is an autocomplete field vs a dropdown.
-     * Autocomplete fields typically:
-     * - Are input elements (not divs)
-     * - Have role="combobox" or type="text"
-     * - Have autocomplete attributes
-     * - OR contain an input with these properties
+     * 
+     * CRITICAL DISTINCTION:
+     * - TRUE AUTOCOMPLETE: User types free-form text, no predefined options (e.g., Google search)
+     * - DROPDOWN WITH FILTER: User selects from predefined options, may type to filter (e.g., country selector)
+     * 
+     * Many modern dropdowns (React-Select, MUI, Ant Design) allow typing to filter but are NOT autocomplete.
      */
     private boolean isAutocompleteField(Locator element) {
         try {
             String tagName = (String) element.evaluate("el => el.tagName.toLowerCase()");
+            
+            // FIRST: Check for known dropdown library patterns (NOT autocomplete)
+            // These are SELECT dropdowns with filter capability, not autocomplete fields
+            String wrapperClass = (String) element.evaluate("el => el.className || ''");
+            String wrapperParentClass = (String) element.evaluate("el => el.parentElement ? el.parentElement.className || '' : ''");
+            String wrapperId = (String) element.evaluate("el => el.id || ''");
+            
+            // Check for specific dropdown library signatures
+            boolean isKnownDropdownLibrary = 
+                wrapperClass.contains("react-select") ||      // React-Select
+                wrapperClass.contains("vue-select") ||        // Vue-Select  
+                wrapperClass.contains("ng-select") ||         // Angular ng-select
+                wrapperClass.contains("ant-select") ||        // Ant Design
+                wrapperClass.contains("MuiSelect") ||         // Material-UI
+                wrapperParentClass.contains("react-select") ||
+                wrapperId.contains("react-select");
+            
+            if (isKnownDropdownLibrary) {
+                logger.debug("Known dropdown library detected (not autocomplete): {}", wrapperClass);
+                return false;
+            }
+            
+            // Check if child input belongs to a dropdown library
+            Locator inputChild = element.locator("input").first();
+            if (inputChild.count() > 0) {
+                String inputClass = (String) inputChild.evaluate("el => el.className || ''");
+                String inputId = (String) inputChild.evaluate("el => el.id || ''");
+                
+                boolean childIsDropdownLibrary =
+                    inputClass.contains("react-select") ||
+                    inputClass.contains("vue-select") ||
+                    inputClass.contains("ng-select") ||
+                    inputClass.contains("ant-select") ||
+                    inputId.contains("react-select");
+                
+                if (childIsDropdownLibrary) {
+                    logger.debug("Input belongs to dropdown library (not autocomplete)");
+                    return false;
+                }
+            }
+            
+            // NOW check for true autocomplete indicators
             String role = (String) element.evaluate("el => el.getAttribute('role') || ''");
-            String type = (String) element.evaluate("el => el.getAttribute('type') || ''");
             String autocomplete = (String) element.evaluate("el => el.getAttribute('autocomplete') || ''");
             String ariaAutoComplete = (String) element.evaluate("el => el.getAttribute('aria-autocomplete') || ''");
+            String dataType = (String) element.evaluate("el => el.getAttribute('data-type') || ''");
             
-            // Check for autocomplete indicators on the element itself
+            // True autocomplete has specific markers
             boolean isInputElement = "input".equals(tagName) || "textarea".equals(tagName);
             boolean hasComboboxRole = "combobox".equals(role);
-            boolean hasTextType = "text".equals(type) || type.isEmpty();
-            boolean hasAutocompleteAttr = !autocomplete.isEmpty() || !ariaAutoComplete.isEmpty();
             
-            // If it's an input with combobox role or autocomplete attributes, it's likely autocomplete
-            if (isInputElement && (hasComboboxRole || hasAutocompleteAttr || ariaAutoComplete.equals("list"))) {
-                logger.debug("Autocomplete detected: input={}, role={}, autocomplete={}", tagName, role, ariaAutoComplete);
+            // If explicitly marked as autocomplete
+            if (dataType.equals("autocomplete") || autocomplete.equals("on")) {
+                logger.debug("True autocomplete detected: data-type or autocomplete attribute");
                 return true;
             }
             
-            // Check if there's an input child with autocomplete attributes (for React-Select wrappers)
-            Locator inputChild = element.locator("input[role='combobox'], input[aria-autocomplete], input[type='text']").first();
+            // If it's an input with combobox role AND no dropdown library detected
+            if (isInputElement && hasComboboxRole && !ariaAutoComplete.equals("list")) {
+                logger.debug("True autocomplete detected: combobox without aria-autocomplete=list");
+                return true;
+            }
+            
+            // Check child input (for wrappers)
             if (inputChild.count() > 0) {
                 String childRole = (String) inputChild.evaluate("el => el.getAttribute('role') || ''");
-                String childAriaAuto = (String) inputChild.evaluate("el => el.getAttribute('aria-autocomplete') || ''");
+                String childAutocomplete = (String) inputChild.evaluate("el => el.getAttribute('autocomplete') || ''");
+                String childDataType = (String) inputChild.evaluate("el => el.getAttribute('data-type') || ''");
                 
-                if ("combobox".equals(childRole) || "list".equals(childAriaAuto) || !childAriaAuto.isEmpty()) {
-                    logger.debug("Autocomplete detected: wrapper contains input with role={}, aria-autocomplete={}", childRole, childAriaAuto);
-                    // Update the element reference to the input for handleAutocomplete
+                if (childDataType.equals("autocomplete") || childAutocomplete.equals("on")) {
+                    logger.debug("True autocomplete detected: child has autocomplete markers");
                     return true;
+                }
+                
+                // Combobox without list behavior = autocomplete
+                if ("combobox".equals(childRole)) {
+                    String childAriaAuto = (String) inputChild.evaluate("el => el.getAttribute('aria-autocomplete') || ''");
+                    if (!childAriaAuto.equals("list")) {
+                        logger.debug("True autocomplete detected: child combobox without list");
+                        return true;
+                    }
                 }
             }
             
@@ -581,13 +673,16 @@ public class SelectAction implements BrowserAction {
             Thread.sleep(200);
             
             // Step 2: Type partial text to trigger autocomplete
-            // Use first 2 characters or full text if shorter
-            String partialText = optionText.length() > 2 ? optionText.substring(0, 2) : optionText;
+            // Use several characters to narrow down results
+            String partialText = optionText.length() > 3 ? optionText.substring(0, 3) : optionText;
             logger.debug("Typing partial text: '{}'", partialText);
-            inputField.type(partialText);
+            
+            // Type slowly to trigger events
+            inputField.pressSequentially(partialText, new Locator.PressSequentiallyOptions().setDelay(100));
             
             // Step 3: Wait for autocomplete suggestions to appear
-            Thread.sleep(500);
+            // demoqa is slow, so we wait a bit longer
+            Thread.sleep(1200);
             
             // Step 4: Find and click the matching option from suggestions
             // Try multiple patterns for autocomplete suggestions

@@ -10,6 +10,7 @@ public class ActionPlan {
     private String elementName;     
     private String locatorStrategy; 
     private boolean executed = false;  
+    private boolean isNegated = false;  // For negative verification (e.g., "not displayed")
     private String rowAnchor;
     private String frameAnchor;
     private java.util.Map<String, Object> metadata;  // For intelligent processing
@@ -54,6 +55,9 @@ public class ActionPlan {
     public String getFrameAnchor() { return frameAnchor; }
     public void setFrameAnchor(String frameAnchor) { this.frameAnchor = frameAnchor; }
     
+    public boolean isNegated() { return isNegated; }
+    public void setNegated(boolean negated) { this.isNegated = negated; }
+    
     // Metadata methods for intelligent processing
     public void setMetadataValue(String key, Object value) {
         metadata.put(key, value);
@@ -84,6 +88,7 @@ public class ActionPlan {
                 ", locatorStrategy='" + locatorStrategy + '\'' +
                 ", rowAnchor='" + rowAnchor + '\'' +
                 ", frameAnchor='" + frameAnchor + '\'' +
+                ", isNegated=" + isNegated +
                 ", executed=" + executed +
                 '}';
     }

@@ -211,16 +211,24 @@ public class LocatorFactory {
                  return parentSibling;
              }
              
-             // 4b. Check for React-Select in parent's next sibling (nested layouts)
-             // Pattern: <div><div>Label</div></div> <div><div class="react-select-container">...</div></div>
-             Locator parentNextSibling = parent.locator("xpath=following-sibling::*[1]").first();
-             if (parentNextSibling.count() > 0) {
-                 Locator nestedReactSelect = parentNextSibling.locator("div[class*='container'], div[class*='-container'], div[id*='react-select'], div[id*='OptGroup']").first();
-                 if (nestedReactSelect.count() > 0) {
-                     logger.debug("Found React-Select container in parent's next sibling, refining to it");
-                     return nestedReactSelect;
-                 }
-             }
+             // 4b. Check for React-Select or native select in parent's next sibling (nested layouts)
+            // Pattern: <div><p><b>Label</b></p></div> <div><select>...</select></div>
+            Locator parentNextSibling = parent.locator("xpath=following-sibling::*[1]").first();
+            if (parentNextSibling.count() > 0) {
+                // Check for native select
+                Locator nestedSelect = parentNextSibling.locator("select").first();
+                if (nestedSelect.count() > 0) {
+                    logger.debug("Found native select in parent's next sibling, refining to it");
+                    return nestedSelect;
+                }
+                
+                // Check for custom dropdowns
+                Locator nestedReactSelect = parentNextSibling.locator("div[class*='container'], div[class*='-container'], div[id*='react-select'], div[id*='OptGroup']").first();
+                if (nestedReactSelect.count() > 0) {
+                    logger.debug("Found React-Select container in parent's next sibling, refining to it");
+                    return nestedReactSelect;
+                }
+            }
              
              // 4c. Last resort: Check for cousin select (but this might match unrelated elements)
              Locator grandParent = finalLocator.locator("xpath=../..");

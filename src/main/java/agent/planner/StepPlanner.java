@@ -31,15 +31,19 @@ public class StepPlanner {
                 
                 // Special handling for select_multi: extract ALL quoted values
                 if ("select_multi".equals(p.actionType)) {
-                    List<String> allValues = extractAllQuoted(cleanStep);
-                    if (allValues.size() > 1) {
-                        // Remove the last value which is the dropdown name, keep only option values
-                        List<String> optionValues = allValues.subList(0, allValues.size() - 1);
-                        // Join all values with semicolon separator (safer than comma which may appear in option names)
-                        plan.setValue(String.join(";", optionValues));
-                    } else if (allValues.size() == 1) {
-                        // Fallback - single value (shouldn't match select_multi pattern but just in case)
-                        plan.setValue(allValues.get(0));
+                    String dropdownName = plan.getElementName();
+                    List<String> allQuoted = extractAllQuoted(cleanStep);
+                    List<String> values = new ArrayList<>();
+                    
+                    for (String q : allQuoted) {
+                        // All quoted strings EXCEPT the dropdown name are treated as values
+                        if (!q.equalsIgnoreCase(dropdownName)) {
+                            values.add(q);
+                        }
+                    }
+                    
+                    if (!values.isEmpty()) {
+                        plan.setValue(String.join(";", values));
                     }
                     // Change action type to "select" so SelectAction can handle it
                     plan.setActionType("select");

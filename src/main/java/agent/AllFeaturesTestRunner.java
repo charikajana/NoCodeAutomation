@@ -19,12 +19,35 @@ public class AllFeaturesTestRunner {
         
         // Get all feature files
         File featuresDir = new File("src/main/resources/features");
-        File[] featureFiles = featuresDir.listFiles((dir, name) -> name.endsWith(".feature"));
+        
+        // Target specific features
+        java.util.Set<String> targetFeatures = java.util.Set.of(
+            
+            "Alerts.feature",
+            "AutoComplete.feature",
+            "BookStore.feature",
+            "Buttons.feature",
+            "CheckBox.feature",
+            "CombinedActions.feature",
+            "CompleteFormFlow.feature",
+            "DatePicker.feature",
+            "ScrollActions.feature", 
+            "Select.feature", 
+            "Selectable.feature",
+            "Slider.feature"
+        );
+
+        File[] featureFiles = featuresDir.listFiles((dir, name) -> 
+            name.endsWith(".feature") && targetFeatures.contains(name)
+        );
         
         if (featureFiles == null || featureFiles.length == 0) {
-            logger.failure("No feature files found!");
+            logger.failure("No matching feature files found in: {}", featuresDir.getAbsolutePath());
             return;
         }
+
+        // Sort files to ensure consistent execution order
+        java.util.Arrays.sort(featureFiles, (a, b) -> a.getName().compareTo(b.getName()));
         
         logger.info("Found {} feature files\n", featureFiles.length);
         

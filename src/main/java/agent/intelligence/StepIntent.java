@@ -14,11 +14,29 @@ public class StepIntent {
     private IntentAnalyzer.ActionType actionType;
     private String targetDescription;
     private String value;
+    private java.util.List<String> values = new java.util.ArrayList<>();
     private String elementType;
+    private boolean isNegated = false;  // For negative assertions (e.g., "not displayed")
     private Map<String, String> modifiers;
     
     public StepIntent() {
         this.modifiers = new HashMap<>();
+    }
+    
+    public void addValue(String val) {
+        if (this.value == null) this.value = val;
+        this.values.add(val);
+    }
+    
+    public java.util.List<String> getValues() {
+        return values;
+    }
+    
+    public void setValues(java.util.List<String> values) {
+        this.values = values;
+        if (values != null && !values.isEmpty()) {
+            this.value = values.get(0);
+        }
     }
     
     // Getters and Setters
@@ -71,6 +89,14 @@ public class StepIntent {
         this.elementType = elementType;
     }
     
+    public boolean isNegated() {
+        return isNegated;
+    }
+    
+    public void setNegated(boolean negated) {
+        this.isNegated = negated;
+    }
+    
     public Map<String, String> getModifiers() {
         return modifiers;
     }
@@ -89,7 +115,7 @@ public class StepIntent {
     
     @Override
     public String toString() {
-        return String.format("StepIntent{action=%s, target='%s', value='%s', type='%s', modifiers=%s}",
-            actionType, targetDescription, value, elementType, modifiers);
+        return String.format("StepIntent{action=%s, target='%s', value='%s', type='%s', negated=%s, modifiers=%s}",
+            actionType, targetDescription, value, elementType, isNegated, modifiers);
     }
 }
