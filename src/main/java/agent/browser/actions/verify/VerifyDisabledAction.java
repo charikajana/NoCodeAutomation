@@ -36,7 +36,7 @@ public class VerifyDisabledAction implements BrowserAction {
             }
         }
 
-        Locator element = locator.waitForSmartElement(targetName, null, scope, plan.getFrameAnchor());
+        Locator element = locator.waitForSmartElement(targetName, null, scope, plan.getFrameAnchor(), true);
         
         if (element != null) {
             boolean isEnabled = element.isEnabled();

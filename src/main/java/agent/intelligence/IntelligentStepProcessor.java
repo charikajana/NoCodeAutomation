@@ -230,6 +230,14 @@ public class IntelligentStepProcessor {
         if (element != null) {
             // Store as metadata for direct use
             plan.setMetadataValue("intelligent_locator", element);
+            // CRITICAL: Store the page URL so we can detect if the page changed (e.g., window switch)
+            try {
+                String pageUrl = element.page().url();
+                plan.setMetadataValue("resolved_page_url", pageUrl);
+            } catch (Exception e) {
+                // If we can't get the URL, don't block the process
+                logger.debug("Could not store page URL for locator validation: {}", e.getMessage());
+            }
         }
         
         return plan;

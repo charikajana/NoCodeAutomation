@@ -78,8 +78,10 @@ public class CandidateScorer {
 
         // Fuzzy matching only if no solid match yet
         if (score < 100) {
-             if (text.toLowerCase().contains(lowerName) || text.toLowerCase().contains(cleanName)) score += 40; 
-             if (el.title.toLowerCase().contains(lowerName) || el.title.toLowerCase().contains(cleanName)) score += 35; // Tooltip contains
+             if (text.toLowerCase().contains(lowerName) || text.toLowerCase().contains(cleanName)) score += 45; 
+             if (el.id.toLowerCase().contains(lowerName) || el.id.toLowerCase().contains(cleanName)) score += 45; 
+             if (el.name.toLowerCase().contains(lowerName) || el.name.toLowerCase().contains(cleanName)) score += 45; 
+             if (el.title.toLowerCase().contains(lowerName) || el.title.toLowerCase().contains(cleanName)) score += 35; 
              
              try {
                 if (FuzzyMatch.ratio(name, text) > 85 || FuzzyMatch.ratio(cleanName, text) > 85) score += 30;
@@ -87,6 +89,31 @@ public class CandidateScorer {
                 if (FuzzyMatch.ratio(name, el.title) > 85 || FuzzyMatch.ratio(cleanName, el.title) > 85) score += 30;
              } catch (Throwable t) {
              }
+        }
+
+        // ========== PENALTY FOR SEARCH/FILTER FIELDS ==========
+        // Search fields often have generic names like 's', 'search', or placeholders with 'search'/'filter'/'type'
+        // These should NOT be selected when looking for named form fields like "Name", "Email", etc.
+        String lowerPlaceholder = el.placeholder.toLowerCase();
+        String lowerElName = el.name.toLowerCase();
+        if (isFill && score < 100) { // Only penalize if not a strong match already
+            boolean isSearchField = false;
+            
+            // Common search field indicators
+            if ("s".equals(lowerElName) || "search".equals(lowerElName) || "q".equals(lowerElName) || "query".equals(lowerElName)) {
+                isSearchField = true;
+            }
+            
+            // Placeholder text indicates search/filter
+            if (lowerPlaceholder.contains("search") || lowerPlaceholder.contains("filter") || 
+                lowerPlaceholder.contains("type here") || lowerPlaceholder.contains("start typing")) {
+                isSearchField = true;
+            }
+            
+            // Heavy penalty for search fields when looking for specific named fields
+            if (isSearchField && !lowerName.contains("search") && !lowerName.contains("filter")) {
+                score -= 150; // This will make search fields score negative if they don't strongly match
+            }
         }
 
         // ========== TIER 3: TYPE-SPECIFIC BOOSTS AND PENALTIES ==========

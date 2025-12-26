@@ -323,20 +323,6 @@ public class PatternRegistry {
             
         
         // ========================================
-        // TEXT VISIBILITY VERIFICATION (MUST BE BEFORE verify_value)
-        // ========================================
-        // Handles: Verify "Text" is displayed/visible/present
-        // This treats the quoted text as the content to verify, NOT an element name
-        register.add("verify", 
-            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:validate|verify|assert|check)\\s+[\"']([^\"']+)[\"']\\s+(?:is|are)\\s+(?:displayed|visible|present|shown)$", 
-            -1, 1, -1);
-            
-        // Handles: Verify the message "Text" is displayed/visible
-        register.add("verify", 
-            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:validate|verify|assert|check)\\s+(?:the\\s+)?(?:text|message|heading|title|label|form|modal|dialog)?\\s*[\"']([^\"']+)[\"']\\s+(?:is|are)\\s+(?:displayed|visible|present|shown)$", 
-            -1, 1, -1);
-
-        // ========================================
         // MOVED STATE VERIFICATION PATTERNS
         // (Must be checked before generic verify_value)
         // ========================================
@@ -368,21 +354,44 @@ public class PatternRegistry {
             "(?i)^(?:then|and|when)?\\s*(?:validate|verify|check|ensure)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+)?(?:selected|checked|on|chosen|active|expanded|open|should\\s+be\\s+selected)(?:\\s+in\\s+(?:the\\s+)?(?:row|record)\\s+(?:identifying|for|with|containing)\\s+[\"']([^\"']+)[\"'])?$", 
             1, -1, 2);
             
-         register.add("verify_not", 
-            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+[\"']([^\"']+)[\"']\\s+(?:is\\s+)?not\\s+(?:displayed|visible|present|shown)", 
-            1, 2, -1);
-        
+        // Specific state verification for menu items (PRIORITY)
+        register.add("verify_selected", 
+            "(?i)^(?:then|and|when)?\\s*(?:validate|verify|check|ensure)\\s+(?:the\\s+)?active\\s+menu\\s+item\\s+(?:is|should\\s+be)\\s+[\"']([^\"']+)[\"']$", 
+            1, -1, -1);
+            
+        // ========================================
+        // TEXT VISIBILITY VERIFICATION (PRIORITY)
+        // ========================================
+        // Format: Then Validate "Target Text" [message/text] [should be] [visible/displayed]
         register.add("verify", 
-            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+[\"']([^\"']+)[\"']\\s+(?:is\\s+)?(?:displayed|visible|present)", 
-            1, 2, -1);
+            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:validate|verify|assert|check|ensure|I\\s+see)\\s+[\"']([^\"']+)[\"'](?:\\s+(?:text|message|label|heading|info|message/text))?\\s*(?:is|are|should\\s+be|should\\s+be\\s+transparently)?\\s*(?:present|shown|displayed|visible|display|be\\s+displayed|be\\s+visible)$", 
+            1, -1, -1);
         
+        // Format: Then Validate [the] [text/message] "Target Text" [is] [visible/displayed]
+        register.add("verify", 
+            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:validate|verify|assert|check|ensure|I\\s+see)\\s+(?:the\\s+)?(?:text|message|label|heading|title|info|content|message/text)\\s+[\"']([^\"']+)[\"'](?:\\s+(?:is|are|should\\s+be)?\\s*(?:present|shown|displayed|visible|display|be\\s+displayed|be\\s+visible))?$", 
+            1, -1, -1);
+
         register.add("verify_not", 
-            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:validate|verify|assert|check|should be)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+|are\\s+)?not\\s+(?:displayed|visible|present)(?:\\s+[\"']([^\"']+)[\"'])?", 
-            1, 2, -1);
-        
+            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:validate|verify|assert|check)\\s+[\"']([^\"']+)[\"']\\s+(?:that\\s+)?(?:it\\s+)?(?:is\\s+)?not\\s+(?:displayed|visible|present|shown)$", 
+            -1, 1, -1);
+            
+        // Greedy/Element-based visibility (LOW PRIORITY)
+        register.add("verify_not", 
+           "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+[\"']([^\"']+)[\"']\\s+(?:is\\s+)?not\\s+(?:displayed|visible|present|shown)", 
+           1, 2, -1);
+       
         register.add("verify", 
-            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:validate|verify|assert|check|should be)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+|are\\s+)?(?:displayed|visible|present|equals|contains)(?:\\s+[\"']([^\"']+)[\"'])?", 
-            1, 2, -1);
+           "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:validate|verify|assert|check)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+[\"']([^\"']+)[\"']\\s+(?:is\\s+)?(?:displayed|visible|present)", 
+           1, 2, -1);
+       
+        register.add("verify_not", 
+           "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:validate|verify|assert|check|should\\s+be)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+|are\\s+)?not\\s+(?:displayed|visible|present)(?:\\s+[\"']([^\"']+)[\"'])?", 
+           1, 2, -1);
+       
+        register.add("verify", 
+           "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:validate|verify|assert|check|should\\s+be)\\s+(?:that\\s+)?(?:the\\s+)?(.+?)\\s+(?:is\\s+|are\\s+)?(?:displayed|visible|present|equals|contains)(?:\\s+[\"']([^\"']+)[\"'])?", 
+           1, 2, -1);
 
         // ========================================
         // Handles: Verify "name@example.com" with Email placeholder
@@ -402,18 +411,6 @@ public class PatternRegistry {
             "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:validate|verify|assert|check)\\s+[\"']?([^\"']+)[\"']?\\s+(?:is\\s+filled\\s+in|is|appears\\s+in)\\s+(?:the\\s+)?(.+?)(?:\\s+field|\\s+box|\\s+input)?$", 
             2, 1, -1);
             
-        // Positive verification with various phrasings
-        register.add("verify", 
-            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:validate|verify|assert|check)\\s+[\"']([^\"']+)[\"']\\s+(?:this\\s+)?(?:text|message)\\s+(?:is\\s+)?(?:present|shown|displayed|visible)", 
-            -1, 1, -1);
-        
-        register.add("verify", 
-            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:validate|verify|assert|check)\\s+(?:the\\s+)?(?:text|message)\\s+[\"']([^\"']+)[\"']\\s+(?:is\\s+)?(?:present|shown|displayed|visible)", 
-            -1, 1, -1);
-        
-        register.add("verify", 
-            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:validate|verify|assert|check)\\s+[\"']([^\"']+)[\"']\\s+(?:message|text)?\\s*(?:should\\s+be)?\\s*(?:display|displayed|present|shown|visible)", 
-            -1, 1, -1);
         
         // Negative verification
         register.add("verify_not", 
@@ -422,10 +419,6 @@ public class PatternRegistry {
         
         register.add("verify_not", 
             "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:validate|verify|assert|check)\\s+[\"']([^\"']+)[\"']\\s+(?:this\\s+)?(?:text|message)\\s+(?:should\\s+)?not\\s+(?:be\\s+)?(?:display|displayed|present|shown|visible)", 
-            -1, 1, -1);
-        
-        register.add("verify", 
-            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:validate|verify|assert|check)\\s+[\"']([^\"']+)[\"'](?:\\s+message)?\\s+is\\s+(?:displayed|visible|present|shown)", 
             -1, 1, -1);
         
         // (State verification patterns moved up before verify_value)
@@ -549,6 +542,25 @@ public class PatternRegistry {
      * @param register Function that accepts (actionType, regex, groupMap)
      */
     public static void registerTablePatterns(TablePatternRegistrar register) {
+        
+        // ========================================
+        // URL VERIFICATION PATTERNS
+        // ========================================
+        // Verify URL exactly matches: "Verify Current URL exactly matches 'https://example.com'"
+        register.add("verify_url",
+            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*" +
+            "(?:verify|check|assert)\\s+(?:current\\s+|page\\s+)?url\\s+" +
+            "(?:exactly\\s+)?(?:matches|is|equals)\\s+" +
+            "[\"']([^\"']+)[\"']",
+            Map.of("value", 1));
+        
+        // Verify URL contains: "Verify URL contains 'search'"
+        register.add("verify_url",
+            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*" +
+            "(?:verify|check|assert)\\s+(?:current\\s+|page\\s+)?url\\s+" +
+            "contains\\s+" +
+            "[\"']([^\"']+)[\"']",
+            Map.of("value", 1));
         
         // ========================================
         // SLIDER / RANGE INPUT (Top Priority in Table Patterns)
@@ -817,9 +829,10 @@ public class PatternRegistry {
         // MOUSE ACTIONS / TOOLTIPS
         // ========================================
         // Hover: "Hover over the 'Submit' button", "Mouse over 'Profile' icon"
+        // Hover: "hover over 'Electronics'", "mouse over 'Powerbank'", "move mouse to 'Cart'", "point to 'Menu'"
         register.add("hover",
             "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*" +
-            "(?:hover|mouse\\s*over)\\s+(?:over\\s+)?(?:the\\s+)?" +
+            "(?:hover|mouse\\s*over|move\\s+mouse\\s+to|point\\s+to|focus\\s+on|place\\s+cursor\\s+on)\\s+(?:over\\s+|to\\s+)?(?:the\\s+)?" +
             "[\"']?([^\"']+)[\"']?",
             Map.of("elementName", 1));
 
@@ -831,6 +844,21 @@ public class PatternRegistry {
             "(?:contains|is)\\s+" +
             "[\"']([^\"']+)[\"']",
             Map.of("elementName", 1, "value", 2));
+        
+        // Verify tooltip appears with text: "Verify tooltip 'More information' appears"
+        register.add("verify_tooltip",
+            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*" +
+            "(?:verify|check)\\s+tooltip\\s+" +
+            "[\"']([^\"']+)[\"']\\s+" +
+            "(?:appears|is displayed|is visible|shows|is shown)",
+            Map.of("value", 1));
+        
+        // Verify tooltip disappears: "Verify tooltip disappears"
+        register.add("verify_tooltip",
+            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*" +
+            "(?:verify|check)\\s+tooltip\\s+" +
+            "(?:disappears|is hidden|is not visible|hides|is not displayed)",
+            Map.of("value", ""));
         
         // Overly broad pattern - commented out to prevent false matches
         // register.add("multiselect_item",
