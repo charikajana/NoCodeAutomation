@@ -29,6 +29,7 @@ public class AllFeaturesTestRunner {
             "Buttons.feature",
             "CheckBox.feature",
             "CombinedActions.feature",
+            "CompleteFormFlow.feature",
             "DatePicker.feature",
             "ScrollActions.feature", 
             "Select.feature", 
