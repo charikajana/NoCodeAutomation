@@ -159,6 +159,12 @@ public class IntentAnalyzer {
         ACTION_VERBS.put("hover", ActionType.HOVER);
         ACTION_VERBS.put("mouseover", ActionType.HOVER);
         ACTION_VERBS.put("mouse-over", ActionType.HOVER);
+        ACTION_VERBS.put("mouse over", ActionType.HOVER);
+        ACTION_VERBS.put("places cursor on", ActionType.HOVER);
+        ACTION_VERBS.put("move mouse to", ActionType.HOVER);
+        ACTION_VERBS.put("focus on", ActionType.HOVER);
+        ACTION_VERBS.put("hover on", ActionType.HOVER);
+        ACTION_VERBS.put("hover over", ActionType.HOVER);
         
         // ========================================
         // SELECT/CHOOSE ACTIONS (15+ variants)
@@ -191,9 +197,6 @@ public class IntentAnalyzer {
         ACTION_VERBS.put("access", ActionType.NAVIGATE);
         ACTION_VERBS.put("load", ActionType.NAVIGATE);
         ACTION_VERBS.put("browse", ActionType.NAVIGATE);
-        ACTION_VERBS.put("reach", ActionType.NAVIGATE);
-        ACTION_VERBS.put("launch", ActionType.NAVIGATE);
-        ACTION_VERBS.put("start", ActionType.NAVIGATE);
         ACTION_VERBS.put("redirect", ActionType.NAVIGATE);
         ACTION_VERBS.put("transfer", ActionType.NAVIGATE);
         
@@ -531,9 +534,9 @@ public class IntentAnalyzer {
         }
         
         // Remove common noise words (at start, middle, or end)
-        target = target.replaceAll("(?i)^(the|a|an|on|at|to|from|is|are|be|my|your|our|their)\\s+", "");  // At start
-        target = target.replaceAll("(?i)\\s+(the|a|an|on|at|to|from|is|are|be)\\s+", " ");  // In middle
-        target = target.replaceAll("(?i)\\s+(the|a|an|on|at|to|from|is|are|be)$", "");  // At end
+        target = target.replaceAll("(?i)^(the|a|an|on|at|to|from|is|are|be|has|have|my|your|our|their)\\s+", "");  // At start
+        target = target.replaceAll("(?i)\\s+(the|a|an|on|at|to|from|is|are|be|has|have)\\s+", " ");  // In middle
+        target = target.replaceAll("(?i)\\s+(the|a|an|on|at|to|from|is|are|be|has|have)$", "");  // At end
         
         // Remove trailing prepositions
         target = target.replaceAll("(?i)\\s+(with|for|by)\\s*$", "");
@@ -683,9 +686,12 @@ public class IntentAnalyzer {
         if (lower.matches("^\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}$")) return true;
         if (lower.matches("^\\d{4}[/-]\\d{1,2}[/-]\\d{1,2}$")) return true;
         
-        String[] months = {"jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"};
+        String[] months = {
+            "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december",
+            "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"
+        };
         for (String month : months) {
-            if (lower.contains(month)) return true;
+            if (lower.matches(".*\\b" + month + "\\b.*")) return true;
         }
         
         return false;

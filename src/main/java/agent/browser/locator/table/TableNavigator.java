@@ -34,7 +34,7 @@ public class TableNavigator {
         logger.warning("Using legacy anchor-based search for: '{}'", anchorText);
         logger.warning("(Consider using column-based search for better accuracy)");
         
-        // CRITICAL FIX: Search within table only - specifically target React Table structure
+        // CRITICAL FIX: Search within table only - supports any table framework
         String tableSelector = "table, [role='grid'], [role='table'], .rt-table, .ReactTable, " +
                                "div:has(> .rt-thead), div:has(> .rt-tbody), .data-table, [class*='table']";
         

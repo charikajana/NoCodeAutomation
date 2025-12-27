@@ -72,25 +72,17 @@ public class VerifyCheckedAction implements BrowserAction {
                         debugInfo = (String) element.evaluate("el => el.tagName + ' id=' + el.id + ' class=' + el.className");
                     } catch (Exception ignored) {}
 
-                    // SPECIAL CASE: Autocomplete multi-value tags (React-Select, etc.)
-                    // and Selectable list items
-                    // For these, "selected" means visible tag or active class, not checkbox state
-                    boolean isAutocompleteTag = debugInfo.toLowerCase().contains("multi-value") || 
-                                               debugInfo.toLowerCase().contains("auto-complete");
-                    boolean isSelectableListItem = debugInfo.toLowerCase().contains("list-group-item");
-                    
-                    if (isAutocompleteTag) {
-                        // For autocomplete, just check if the element is visible
+                    // Use generic, framework-agnostic detection methods
+                    if (isMultiValueComponent(element)) {
+                        // Multi-value components (tags/chips) - check visibility
                         isChecked = element.isVisible();
-                        logger.debug("Autocomplete tag detected - checking visibility instead of checked state: {}", isChecked);
-                    } else if (isSelectableListItem) {
-                        // For selectable list items, check if they have the 'active' class
-                        String classList = (String) element.evaluate("el => el.className");
-                        isChecked = classList != null && classList.toLowerCase().contains("active");
-                        logger.debug("Selectable list item detected - checking for 'active' class: {}", isChecked);
+                        logger.debug("Multi-value component detected - checking visibility: {}", isChecked);
+                    } else if (isSelectableListItem(element)) {
+                        // Selectable list items - check for active/selected state
+                        isChecked = hasActiveOrSelectedState(element);
+                        logger.debug("Selectable list item detected - active/selected state: {}", isChecked);
                     } else {
                         // REGULAR CASE: Checkboxes, radios, and other interactive elements
-                        // Use a simpler approach to avoid JavaScript syntax errors
                         try {
                             String tagName = (String) element.evaluate("el => el.tagName");
                             
@@ -156,6 +148,145 @@ public class VerifyCheckedAction implements BrowserAction {
         } else {
             logger.section("VALIDATION FAILED");
             logger.info("--------------------------------------------------");
+            return false;
+        }
+    }
+    
+    /**
+     * Detects multi-value components (tags, chips, tokens) using generic patterns.
+     * Works with: React-Select, Angular Material Chips, Vue Tags Input, vanilla JS implementations
+     * 
+     * Detection Strategy:
+     * 1. Check ARIA role (listbox, combobox) - WCAG standard
+     * 2. Check for common class patterns (tag, chip, token)
+     * 3. Framework-specific patterns as fallback only
+     */
+    private boolean isMultiValueComponent(Locator element) {
+        try {
+            // Strategy 1: Check ARIA role (highest priority - framework-agnostic)
+            String role = (String) element.evaluate("el => el.getAttribute('role')");
+            if ("listbox".equals(role) || "combobox".equals(role)) {
+                return true;
+            }
+            
+            // Strategy 2: Check for generic tag/chip/token patterns
+            String classList = (String) element.evaluate("el => el.className || ''");
+            if (classList != null && !classList.isEmpty()) {
+                String lowerClass = classList.toLowerCase();
+                // Generic patterns that work across frameworks
+                if (lowerClass.contains("tag") && !lowerClass.contains("stage")) {  // Avoid "stage"
+                    return true;
+                }
+                if (lowerClass.contains("chip")) {
+                    return true;
+                }
+                if (lowerClass.contains("token")) {
+                    return true;
+                }
+                if (lowerClass.contains("badge") && lowerClass.contains("dismiss")) {
+                    return true;
+                }
+                
+                // Framework-specific patterns as fallback
+                if (lowerClass.contains("multi-value")) {  // React-Select
+                    return true;
+                }
+                if (lowerClass.contains("mat-chip")) {  // Angular Material
+                    return true;
+                }
+                if (lowerClass.contains("auto-complete")) {
+                    return true;
+                }
+            }
+            
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    
+    /**
+     * Detects selectable list items using generic patterns.
+     * Works with: Bootstrap, Material-UI, Ant Design, Chakra UI, vanilla HTML
+     * 
+     * Detection Strategy:
+     * 1. Check if element is an LI tag
+     * 2. Verify it's part of a selectable list context
+     */
+    private boolean isSelectableListItem(Locator element) {
+        try {
+            String tagName = (String) element.evaluate("el => el.tagName");
+            if (!"LI".equalsIgnoreCase(tagName)) {
+                return false;
+            }
+            
+            // Check if this LI has selectable characteristics
+            String classList = (String) element.evaluate("el => el.className || ''");
+            if (classList != null && !classList.isEmpty()) {
+                String lowerClass = classList.toLowerCase();
+                // Generic patterns
+                if (lowerClass.contains("selectable")) {
+                    return true;
+                }
+                if (lowerClass.contains("clickable")) {
+                    return true;
+                }
+                
+                // Common UI framework patterns (as additional indicators)
+                if (lowerClass.contains("list-group-item")) {  // Bootstrap
+                    return true;
+                }
+                if (lowerClass.contains("list-item")) {  // Generic pattern
+                    return true;
+                }
+                if (lowerClass.contains("menu-item")) {
+                    return true;
+                }
+            }
+            
+            // Check if parent UL/OL has selectable attributes
+            String parentRole = (String) element.evaluate("el => el.parentElement?.getAttribute('role') || ''");
+            if ("listbox".equals(parentRole) || "menu".equals(parentRole)) {
+                return true;
+            }
+            
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    
+    /**
+     * Checks if an element has active or selected state using generic patterns.
+     * Works with all frameworks by checking both ARIA attributes and class names.
+     * 
+     * Priority: ARIA > Class patterns
+     */
+    private boolean hasActiveOrSelectedState(Locator element) {
+        try {
+            // Priority 1: Check ARIA attributes (framework-agnostic standard)
+            String ariaSelected = (String) element.evaluate("el => el.getAttribute('aria-selected')");
+            if ("true".equals(ariaSelected)) {
+                return true;
+            }
+            
+            String ariaChecked = (String) element.evaluate("el => el.getAttribute('aria-checked')");
+            if ("true".equals(ariaChecked)) {
+                return true;
+            }
+            
+            // Priority 2: Check generic class patterns
+            String classList = (String) element.evaluate("el => el.className || ''");
+            if (classList != null && !classList.isEmpty()) {
+                String lowerClass = classList.toLowerCase();
+                return lowerClass.contains("active") ||
+                       lowerClass.contains("selected") ||
+                       lowerClass.contains("is-active") ||
+                       lowerClass.contains("is-selected");
+            }
+            
+            return false;
+        } catch (Exception e) {
             return false;
         }
     }

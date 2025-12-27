@@ -191,11 +191,11 @@ public class SmartLocator {
             // Check ID or other attributes via evaluation if name doesn't match
             try {
                 if (frame.isDetached()) continue;
-                String frameId = (String) frame.evaluate("() => window.frameElement ? window.frameElement.id : ''");
+                String frameId = String.valueOf(frame.evaluate("() => window.frameElement ? window.frameElement.id : ''"));
                 if (frameAnchor.equalsIgnoreCase(frameId)) return frame;
                 
                 if (frame.isDetached()) continue;
-                String frameTitle = (String) frame.evaluate("() => window.frameElement ? window.frameElement.title : ''");
+                String frameTitle = String.valueOf(frame.evaluate("() => window.frameElement ? window.frameElement.title : ''"));
                 if (frameAnchor.equalsIgnoreCase(frameTitle)) return frame;
             } catch (Exception e) {
                 // Ignore errors in detached or cross-origin frames

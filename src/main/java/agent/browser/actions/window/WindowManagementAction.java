@@ -203,15 +203,22 @@ public class WindowManagementAction implements BrowserAction {
     private boolean verifyWindowCount(Page page, String expectedValue) {
         try {
             int expected = Integer.parseInt(expectedValue);
-            int actual = page.context().pages().size();
             
-            if (actual == expected) {
-                logger.success("Window count verification successful: Count={}", actual);
-                return true;
-            } else {
-                logger.failure("Window count verification failed: Expected={}, Actual={}", expected, actual);
-                return false;
+            // Wait up to 5 seconds for the window count to reflect the expected state
+            // This prevents flakiness when windows take time to open/close
+            int actual = -1;
+            for (int i = 0; i < 10; i++) {
+                actual = page.context().pages().size();
+                if (actual == expected) {
+                    logger.success("Window count verification successful: Count={}", actual);
+                    return true;
+                }
+                logger.debug("Window count mismatch (Attempt {}): Expected={}, Actual={}. Retrying...", i+1, expected, actual);
+                page.waitForTimeout(500);
             }
+            
+            logger.failure("Window count verification failed after 5s: Expected={}, Actual={}", expected, actual);
+            return false;
         } catch (Exception e) {
             logger.error("Error verifying window count: {}", e.getMessage());
             return false;

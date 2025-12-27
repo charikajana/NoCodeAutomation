@@ -63,12 +63,20 @@ public class SetDateAction implements BrowserAction {
             
             boolean isReadOnly = false;
             try {
-                isReadOnly = (Boolean) dateField.evaluate("el => el.readOnly || el.hasAttribute('readonly')");
+                Object evalResult = dateField.evaluate("el => el.readOnly || el.hasAttribute('readonly')");
+                // Safely handle the result - it might be a Boolean, or a complex object
+                if (evalResult instanceof Boolean) {
+                    isReadOnly = (Boolean) evalResult;
+                } else if (evalResult != null) {
+                    // If it's a complex object (like LinkedHashMap from some libraries), convert to string and check
+                    isReadOnly = Boolean.parseBoolean(evalResult.toString());
+                }
                 if (isReadOnly) {
                     logger.debug("Field is read-only, skipping direct input");
                 }
             } catch (Exception e) {
                 // If we can't check, assume it's not read-only
+                logger.debug("Could not determine readonly status: {}", e.getMessage());
             }
             
             boolean success;

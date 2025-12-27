@@ -53,17 +53,17 @@ public class DomScanner {
                 "    const isVisible = hasDimension && isStyleVisible;" +
                 "    if (!includeHidden && !isVisible) return null;" +
                 "    return {" +
-                "      tag: el.tagName.toLowerCase()," +
+                "      tag: el.tagName ? el.tagName.toLowerCase() : ''," +
                 "      id: el.id || ''," +
-                "      forAttr: el.getAttribute('for') || ''," +
+                "      forAttr: el.getAttribute ? el.getAttribute('for') || '' : ''," +
                 "      name: el.name || ''," +
                 "      text: el.innerText || el.textContent || ''," +
                 "      placeholder: el.placeholder || ''," +
-                "      label: el.getAttribute('aria-label') || ''," +
-                "      title: el.getAttribute('title') || ''," +
+                "      label: el.getAttribute ? el.getAttribute('aria-label') || '' : ''," +
+                "      title: el.getAttribute ? el.getAttribute('title') || '' : ''," +
                 "      type: el.type || ''," +
-                "      role: el.getAttribute('role') || ''," +
-                "      class: el.className || ''," +
+                "      role: el.getAttribute ? el.getAttribute('role') || '' : ''," +
+                "      class: typeof el.className === 'string' ? el.className : (el.getAttribute ? el.getAttribute('class') || '' : '')," +
                 "      visible: isVisible" +
                 "    };" +
                 "  }).filter(item => item !== null);" +
@@ -95,19 +95,19 @@ public class DomScanner {
 
         for (Map<String, Object> map : rawList) {
             ElementCandidate c = new ElementCandidate();
-            c.tag = (String) map.getOrDefault("tag", "");
-            c.id = (String) map.getOrDefault("id", "");
-            c.text = (String) map.getOrDefault("text", "");
-            c.name = (String) map.getOrDefault("name", "");
-            c.placeholder = (String) map.getOrDefault("placeholder", "");
-            c.label = (String) map.getOrDefault("label", "");
-            c.title = (String) map.getOrDefault("title", "");
-            c.type = (String) map.getOrDefault("type", "");
-            c.role = (String) map.getOrDefault("role", "");
-            c.className = (String) map.getOrDefault("class", "");
-            c.forAttr = (String) map.getOrDefault("forAttr", "");
+            c.tag = String.valueOf(map.getOrDefault("tag", ""));
+            c.id = String.valueOf(map.getOrDefault("id", ""));
+            c.text = String.valueOf(map.getOrDefault("text", ""));
+            c.name = String.valueOf(map.getOrDefault("name", ""));
+            c.placeholder = String.valueOf(map.getOrDefault("placeholder", ""));
+            c.label = String.valueOf(map.getOrDefault("label", ""));
+            c.title = String.valueOf(map.getOrDefault("title", ""));
+            c.type = String.valueOf(map.getOrDefault("type", ""));
+            c.role = String.valueOf(map.getOrDefault("role", ""));
+            c.className = String.valueOf(map.getOrDefault("class", ""));
+            c.forAttr = String.valueOf(map.getOrDefault("forAttr", ""));
             Object vis = map.get("visible");
-            c.visible = vis != null && (Boolean) vis;
+            c.visible = vis != null && Boolean.parseBoolean(String.valueOf(vis));
             candidates.add(c);
         }
         return candidates;

@@ -29,11 +29,11 @@ public class DynamicTableXPathBuilder {
         logger.info("Detecting table structure...");
         
         // Try different table structures - MOST SPECIFIC FIRST
-        // React Table / ARIA Grid with gridcell (DemoQA uses role='row' and role='gridcell')
-        if (tryStructure("*[role='row']", "*[role='gridcell']", "React Table / ARIA Grid")) return;
+        // ARIA Grid with gridcell (works with React Table, AG-Grid, Material-UI, etc.)
+        if (tryStructure("*[role='row']", "*[role='gridcell']", "ARIA Grid Table")) return;
         
-        // React Table with class names (fallback if no role attributes)
-        if (tryStructure("div[class*='rt-tr']", "div[class*='rt-td']", "React Table (class)")) return;
+        // Div-based tables with class patterns (fallback if no ARIA roles)
+        if (tryStructure("div[class*='rt-tr']", "div[class*='rt-td']", "Div-Based Table (class)")) return;
         
         // Standard HTML Table
         if (tryStructure("tr", "td", "HTML Table")) return;
@@ -101,7 +101,7 @@ public class DynamicTableXPathBuilder {
         String[] headerSelectors = {
             "th",                           // Standard HTML
             "[role='columnheader']",        // ARIA
-            "div[class*='rt-th']",         // React Table
+            "div[class*='rt-th']",         // Div-based tables
             "div[class*='header-cell']",   // Generic
             "*[class*='thead'] *[class*='cell']"  // Generic nested
         };

@@ -29,7 +29,7 @@ public class VerifyValidationAction implements BrowserAction {
         try {
             // Check for invalid state or red border
             // 1. HTML5 validation state
-            // 2. CSS class indicating error (Bootstrap/React common)
+            // 2. CSS class indicating error (common across frameworks)
             // 3. Computed style border-color
             boolean isInvalid = (boolean) element.evaluate("el => {" +
                 "  const style = window.getComputedStyle(el);" +

@@ -20,38 +20,14 @@ public class AllFeaturesTestRunner {
         // Get all feature files
         File featuresDir = new File("src/main/resources/features");
         
-        // Target specific features
-        java.util.Set<String> targetFeatures = java.util.Set.of(
-            
-            "Links.feature",
-            "Menu.feature",
-            "Models.feature",
-            "Navigation.feature",
-            "OtherWebSite.feature",
-            "ProgressBar.feature",
-            "RadioButton.feature",
-            "StateVerification.feature",
-            "SubjectPronounTest.feature", 
-            "Tabs.feature", 
-            "TextBox.feature",
-            "Tooltip.feature",
-            "WebTable.feature",
-            "Alerts.feature",
-            "AutoComplete.feature",
-            "BookStore.feature",
-            "Buttons.feature",
-            "CheckBox.feature",
-            "CombinedActions.feature",
-            "CompleteFormFlow.feature",
-            "DatePicker.feature",
-            "ScrollActions.feature", 
-            "Select.feature", 
-            "Selectable.feature",
-            "Slider.feature"
-        );
+        // Target specific features (Empty set = all features) - can be set via -DtargetFeatures
+        String targetFeaturesProp = System.getProperty("targetFeatures", "");
+        java.util.Set<String> targetFeatures = targetFeaturesProp.isEmpty() ? 
+            java.util.Set.of() : 
+            new java.util.HashSet<>(java.util.Arrays.asList(targetFeaturesProp.split(",")));
 
         File[] featureFiles = featuresDir.listFiles((dir, name) -> 
-            name.endsWith(".feature") && targetFeatures.contains(name)
+            name.endsWith(".feature") && (targetFeatures.isEmpty() || targetFeatures.contains(name))
         );
         
         if (featureFiles == null || featureFiles.length == 0) {
