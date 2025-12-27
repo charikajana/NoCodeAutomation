@@ -72,32 +72,51 @@ public class VerifyCheckedAction implements BrowserAction {
                         debugInfo = (String) element.evaluate("el => el.tagName + ' id=' + el.id + ' class=' + el.className");
                     } catch (Exception ignored) {}
 
-                    isChecked = (boolean) element.evaluate("el => {" +
-                        "  const isSelected = (e) => {" +
-                        "    if (!e || !e.getAttribute) return false;" +
-                        "    const cl = (e.getAttribute('class') || '').toString().toLowerCase();" +
-                        "    const ac = e.getAttribute('aria-checked');" +
-                        "    const as = e.getAttribute('aria-selected');" +
-                        "    return ac === 'true' || as === 'true' || " +
-                        "           cl.includes('active') || cl.includes('selected') || cl.includes('checked') || " +
-                        "           cl.includes('icon-check');" +
-                        "  };" +
-                        "  if (el.tagName === 'INPUT' && el.checked) return true;" +
-                        "  if (isSelected(el)) return true;" +
-                        "  const children = el.querySelectorAll('*');" +
-                        "  for (const c of children) if (isSelected(c)) return true;" +
-                        "  let p = el.parentElement;" +
-                        "  while (p && p.tagName !== 'BODY') {" +
-                        "    if (isSelected(p)) return true;" +
-                        "    const childInput = p.querySelector('input');" +
-                        "    if (childInput && childInput.checked) return true;" +
-                        "    p = p.parentElement;" +
-                        "  }" +
-                        "  return false;" +
-                        "}");
+                    // SPECIAL CASE: Autocomplete multi-value tags (React-Select, etc.)
+                    // and Selectable list items
+                    // For these, "selected" means visible tag or active class, not checkbox state
+                    boolean isAutocompleteTag = debugInfo.toLowerCase().contains("multi-value") || 
+                                               debugInfo.toLowerCase().contains("auto-complete");
+                    boolean isSelectableListItem = debugInfo.toLowerCase().contains("list-group-item");
                     
-                    if (!isChecked && "input".equalsIgnoreCase((String) element.evaluate("el => el.tagName"))) {
-                        isChecked = element.isChecked();
+                    if (isAutocompleteTag) {
+                        // For autocomplete, just check if the element is visible
+                        isChecked = element.isVisible();
+                        logger.debug("Autocomplete tag detected - checking visibility instead of checked state: {}", isChecked);
+                    } else if (isSelectableListItem) {
+                        // For selectable list items, check if they have the 'active' class
+                        String classList = (String) element.evaluate("el => el.className");
+                        isChecked = classList != null && classList.toLowerCase().contains("active");
+                        logger.debug("Selectable list item detected - checking for 'active' class: {}", isChecked);
+                    } else {
+                        // REGULAR CASE: Checkboxes, radios, and other interactive elements
+                        // Use a simpler approach to avoid JavaScript syntax errors
+                        try {
+                            String tagName = (String) element.evaluate("el => el.tagName");
+                            
+                            if ("INPUT".equalsIgnoreCase(tagName)) {
+                                // For INPUT elements, use Playwright's built-in isChecked()
+                                isChecked = element.isChecked();
+                                logger.debug("INPUT element - using isChecked(): {}", isChecked);
+                            } else {
+                                // For other elements, check for selection indicators
+                                String className = (String) element.evaluate("el => el.className || ''");
+                                String ariaChecked = (String) element.evaluate("el => el.getAttribute('aria-checked') || ''");
+                                String ariaSelected = (String) element.evaluate("el => el.getAttribute('aria-selected') || ''");
+                                
+                                isChecked = "true".equals(ariaChecked) || 
+                                           "true".equals(ariaSelected) ||
+                                           (className != null && (className.toLowerCase().contains("active") ||
+                                                                 className.toLowerCase().contains("selected") ||
+                                                                 className.toLowerCase().contains("checked")));
+                                logger.debug("Non-INPUT element - className: {}, aria-checked: {}, aria-selected: {}, isChecked: {}", 
+                                            className, ariaChecked, ariaSelected, isChecked);
+                            }
+                        } catch (Exception evalEx) {
+                            logger.warn("Error evaluating element state: {}", evalEx.getMessage());
+                            // Fallback to checking visibility for non-checkbox elements
+                            isChecked = element.isVisible();
+                        }
                     }
                 } catch (Exception e) {
                     if (!expectChecked) {
