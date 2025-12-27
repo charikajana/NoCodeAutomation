@@ -20,26 +20,14 @@ public class AllFeaturesTestRunner {
         // Get all feature files
         File featuresDir = new File("src/main/resources/features");
         
-        // Target specific features
-        java.util.Set<String> targetFeatures = java.util.Set.of(
-            "SubjectPronounTest.feature",
-            "Menu.feature",
-            "OtherWebSite.feature",
-            "RadioButton.feature",
-            "Select.feature",
-            "TextBox.feature",
-            "WebTable.feature",
-            "Modals.feature",
-            "Alerts.feature",
-            "Windows.feature",
-            "Navigation.feature",
-            "ProgressBar.feature",
-            "DatePicker.feature",
-            "Slider.feature"
-        );
+        // Target specific features (Empty set = all features) - can be set via -DtargetFeatures
+        String targetFeaturesProp = System.getProperty("targetFeatures", "");
+        java.util.Set<String> targetFeatures = targetFeaturesProp.isEmpty() ? 
+            java.util.Set.of() : 
+            new java.util.HashSet<>(java.util.Arrays.asList(targetFeaturesProp.split(",")));
 
         File[] featureFiles = featuresDir.listFiles((dir, name) -> 
-            name.endsWith(".feature") && targetFeatures.contains(name)
+            name.endsWith(".feature") && (targetFeatures.isEmpty() || targetFeatures.contains(name))
         );
         
         if (featureFiles == null || featureFiles.length == 0) {

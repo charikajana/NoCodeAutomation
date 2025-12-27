@@ -16,6 +16,7 @@ Feature: Test Fill Pattern Variations
     # Using "Update" verb
     When Update Permanent Address with the value '456 Oak Ave'
     
+    And Close the browser
 
   Scenario: Test "in/into" pattern variations
     Given Navigate to "https://demoqa.com/text-box"
@@ -31,3 +32,5 @@ Feature: Test Fill Pattern Variations
     
     # Using "the value"
     When Type the value '321 Elm St' in Permanent Address
+    
+    And Close the browser

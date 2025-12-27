@@ -188,6 +188,8 @@ public class PatternRegistry {
         // KEYBOARD ACTIONS (MUST BE BEFORE CLICK PATTERN)
         // ========================================
         // Press key: "Press Escape", "Press Enter key", "I press Escape to close modal"
+        // Press key: "Press Escape", "Press Enter key", "I press Escape to close modal", "I press Ctrl+S", "Press Tab 5 times"
+        // Press key: "Press Escape", "Press Enter key", "I press Escape to close modal", "I press Ctrl+S", "Press Tab 5 times"
         register.add("press_key", 
             "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:press|hit|type)\\s+(Escape|Enter|Tab|Space|Delete|Backspace|ArrowUp|ArrowDown|ArrowLeft|ArrowRight)(?:\\s+key)?(?:\\s+to\\s+.+)?$", 
             1, -1, -1);
@@ -529,10 +531,6 @@ public class PatternRegistry {
             "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:click|tap|press|hit)\\s+(?:on\\s+)?(?:the\\s+)?[\"']?([^\"']+)[\"']?", 
             1, -1, -1);
 
-        // ========================================
-        // GENERAL FALLBACK PATTERNS
-        // (Must be registered LAST to avoid greedy capture of more specific steps)
-        // ========================================
         // Fallback for click: "Click on anything..."
         register.add("click", 
             "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:click|press|tap)(?:\\s+on)?\\s+(.+?)$", 
@@ -833,7 +831,7 @@ public class PatternRegistry {
         // Hover: "hover over 'Electronics'", "mouse over 'Powerbank'", "move mouse to 'Cart'", "point to 'Menu'"
         register.add("hover",
             "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*" +
-            "(?:hover|mouse\\s*over|move\\s+mouse\\s+to|point\\s+to|focus\\s+on|place\\s+cursor\\s+on)\\s+(?:over\\s+|to\\s+)?(?:the\\s+)?" +
+            "(?:hover|mouse\\s*over|move\\s+mouse\\s+to|point\\s+to|focus\\s+on|places?\\s+cursor\\s+on)\\s+(?:over\\s+|to\\s+)?(?:the\\s+)?" +
             "[\"']?([^\"']+)[\"']?",
             Map.of("elementName", 1));
 

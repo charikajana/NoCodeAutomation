@@ -126,10 +126,14 @@ public class IntelligentStepProcessor {
             // Skip browser-level actions (alerts, prompts, confirms, etc.)
             // These need special handlers, not DOM element matching
             // Also skip deselect actions - they have dedicated DeselectAction handler
-            if (isBrowserLevelAction(step) || step.toLowerCase().contains("deselect") || 
-                step.toLowerCase().contains("remove") || step.toLowerCase().contains("unselect")) {
-                logger.debug("Skipping intelligence layer for browser-level action");
-                return null;  // Let legacy patterns handle it
+            String lowerStep = step.toLowerCase();
+            if (isBrowserLevelAction(step) || lowerStep.contains("deselect") || 
+                lowerStep.contains("remove") || lowerStep.contains("unselect") ||
+                lowerStep.contains("progress") || lowerStep.contains("reach") || lowerStep.contains("wait for") || 
+                lowerStep.contains("monitor") || lowerStep.contains("frame") || lowerStep.contains("iframe") || 
+                lowerStep.contains("key") || lowerStep.contains("press") || lowerStep.contains("shortcut")) {
+                logger.debug("Skipping intelligence layer for browser-level or specialized action");
+                return null; // Skip intelligence layer
             }
             
             // Step 1: Extract intent

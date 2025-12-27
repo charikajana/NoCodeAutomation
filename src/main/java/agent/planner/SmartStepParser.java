@@ -156,6 +156,14 @@ public class SmartStepParser {
             return parseCombinedActions(step, page, smartLocator);
         }
         
+        // STRATEGY 2: Check for frame-scoped actions ("In iframe 'x', click 'y'")
+        logger.debug("→ Trying: Frame-Scoped Actions");
+        ActionPlan frameScopedPlan = tryFrameScoping(step, page, smartLocator);
+        if (frameScopedPlan != null) {
+            logger.success("✓ Parsed via: FRAME-SCOPED PATTERN");
+            return frameScopedPlan;
+        }
+
         // STRATEGY 1: INTELLIGENT NLP-BASED PROCESSING (Phase 4)
         if (intelligenceEnabled) {
             logger.debug("→ Trying: Intelligent NLP Processing");
@@ -166,14 +174,6 @@ public class SmartStepParser {
                 return intelligentPlan;
             }
             logger.debug("  ✗ Intelligence layer did not match");
-        }
-        
-        // STRATEGY 2: Check for frame-scoped actions ("In iframe 'x', click 'y'")
-        logger.debug("→ Trying: Frame-Scoped Actions");
-        ActionPlan frameScopedPlan = tryFrameScoping(step);
-        if (frameScopedPlan != null) {
-            logger.success("✓ Parsed via: FRAME-SCOPED PATTERN");
-            return frameScopedPlan;
         }
         
         // STRATEGY 3: Try table-specific patterns first (new features)
@@ -208,7 +208,7 @@ public class SmartStepParser {
     /**
      * Handles patterns like "In iframe 'frame1', Enter 'John' in 'First Name'"
      */
-    private ActionPlan tryFrameScoping(String step) {
+    private ActionPlan tryFrameScoping(String step, Page page, agent.browser.SmartLocator smartLocator) {
         Pattern p = Pattern.compile("^(?i)(?:given|when|then|and|but)?\\s*(?:in|within|inside)\\s+(?:the\\s+)?(?:iframe|frame)\\s+[\"']?([^\"']+)[\"']?[\\s,]+(.+)", Pattern.CASE_INSENSITIVE);
         Matcher m = p.matcher(step);
         
@@ -219,10 +219,18 @@ public class SmartStepParser {
             logger.info("Detected Frame Scoping: '{}'", frameName);
             
             // Parse the remaining part as a normal step
-            ActionPlan innerPlan = parseStep(remainingStep);
+            ActionPlan innerPlan = parseStep(remainingStep, page, smartLocator);
             
             // Set the frame anchor
             innerPlan.setFrameAnchor(frameName);
+            
+            // If it's a composite action plan, propagate the frame anchor to all sub-actions
+            if (innerPlan instanceof CompositeActionPlan) {
+                for (ActionPlan sub : ((CompositeActionPlan) innerPlan).getSubActions()) {
+                    sub.setFrameAnchor(frameName);
+                }
+            }
+            
             return innerPlan;
         }
         return null;
