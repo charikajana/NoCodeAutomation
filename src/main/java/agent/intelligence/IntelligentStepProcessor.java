@@ -330,6 +330,9 @@ public class IntelligentStepProcessor {
             "switch to", "new window", "new tab", "close window", "close tab", 
             "window exists", "tab exists", "click and switch", "main window",
             
+            // Progress Bar / Reach (bypass for specialized WaitForProgressAction)
+            "progress", "reach",
+            
             // Tooltip verification (bypass for PatternRegistry)
             "tooltip"
         };

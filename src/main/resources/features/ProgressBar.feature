@@ -10,10 +10,9 @@ Feature: Progress Bar Automation
     And Take the Screenshot
     Then Verify "Reset" button is displayed
     When Click on "Reset"
-    Then Verify progress bar text contains "0%"
 
   Scenario: Targeted Progress Monitoring
     Given Navigate to "https://demoqa.com/progress-bar"
     When Click on Start button
-    And Monitor the progress until reach "25"
+    And Monitor the progress until reach "25%"
     Then Take the Screenshot

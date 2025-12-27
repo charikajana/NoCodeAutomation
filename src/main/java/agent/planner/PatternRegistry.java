@@ -178,6 +178,11 @@ public class PatternRegistry {
         register.add("wait_page", 
             "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*(?:wait|pause)(?:\\s+for)?\\s+(?:page|network)(?:\\s+to)?(?:\\s+be)?(?:\\s+)?(?:load(?:ed)?(?:\\s+completed)?|idle|ready)", 
             -1, -1, -1);
+
+        // Progress bar verification: "Monitor the progress until reach '25'"
+        register.add("wait_for_progress",
+            "(?i)(?:wait|pause|monitor).*?(progress|loading).*?(?:until\\s+reach|until|reach|to|is|be)\\s+[\"']([^\"']+)[\"']",
+            1, 2, -1);
         
         // ========================================
         // KEYBOARD ACTIONS (MUST BE BEFORE CLICK PATTERN)
@@ -819,11 +824,7 @@ public class PatternRegistry {
         // SLIDER / RANGE INPUT
         // PROGRESS BAR / MONITORING
         // ========================================
-        // Progress bar verification is still in table patterns
-        register.add("wait_for_progress",
-            "(?i)^(?:given|when|then|and|but)?\\s*(?:I|user|we|he|she|they)?\\s*" +
-            "(?:wait|pause)(?:\\s+for)?\\s+(?:the\\s+)?(.+?(?:progress|loading))\\s+(?:bar|indicator)?\\s+(?:to\\s+)?(?:reach|be|is)\\s+[\"']([^\"']+)[\"']",
-            Map.of("elementName", 1, "value", 2));
+        // Progress bar verification removed (moved to registerAllPatterns)
         
         // ========================================
         // MOUSE ACTIONS / TOOLTIPS

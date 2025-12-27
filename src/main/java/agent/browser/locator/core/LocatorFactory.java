@@ -32,7 +32,7 @@ public class LocatorFactory {
          // Note: We cannot use ID if scoped, unless we assume ID is unique globally (which is true by spec but not always in reality).
          // Safer to use scope.locator("#id") if strict.
          
-         if (foundId != null && !foundId.isEmpty()) {
+         if (foundId != null && !foundId.isEmpty() && !isDynamicId(foundId)) {
              // Use tag + id and filter by text to disambiguate if IDs are reused (common in DemoQA)
              Locator base = (scope != null) ? scope.locator(foundTag + "#" + foundId) : page.locator(foundTag + "#" + foundId);
              if (foundText != null && !foundText.isEmpty() && foundText.length() < 100 && !"progressbar".equals(parsedType)) {
@@ -41,6 +41,17 @@ public class LocatorFactory {
                  finalLocator = base.first();
              }
          } 
+         else if ("button".equals(foundTag) || "a".equals(foundTag)) {
+             // For buttons and links with dynamic IDs, prioritize Text-based exact matches
+             if (foundText != null && !foundText.isEmpty()) {
+                 if (scope != null) {
+                    finalLocator = scope.getByText(foundText, new Locator.GetByTextOptions().setExact(true)).first();
+                 } else {
+                    finalLocator = page.getByText(foundText, new Page.GetByTextOptions().setExact(true)).first();
+                 }
+                 logger.debug("Prioritizing stable text locator for dynamic-id {}: '{}'", foundTag, foundText);
+             }
+         }
          else if ("progressbar".equals(parsedType) || "progressbar".equals(element.role)) {
              // Priority for progress bars: Role or Tag, NOT text (which changes constantly)
              finalLocator = (scope != null) ? scope.locator("[role='progressbar']").first() : page.locator("[role='progressbar']").first();
@@ -271,5 +282,16 @@ public class LocatorFactory {
          }
 
          return finalLocator;
+    }
+    private boolean isDynamicId(String id) {
+        if (id == null || id.isEmpty()) return false;
+        // Detect DemoQA pattern: Short (5-8 chars) and contains mixed letters and numbers
+        // e.g. "50r6O", "Z2p7q"
+        if (id.length() >= 5 && id.length() <= 10) {
+            boolean hasDigit = id.matches(".*\\d+.*");
+            boolean hasLetter = id.matches(".*[a-zA-Z]+.*");
+            if (hasDigit && hasLetter) return true;
+        }
+        return false;
     }
 }
