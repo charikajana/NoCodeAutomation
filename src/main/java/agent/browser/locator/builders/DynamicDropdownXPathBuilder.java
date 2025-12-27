@@ -8,25 +8,25 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Dynamically detects dropdown type and generates appropriate XPath/selectors
- * Supports: Standard Select, React-Select, Material-UI, Ant Design, ChakraUI, and custom dropdowns
+ * Dynamically detects dropdown type based on capabilities, not frameworks
+ * Works with: Native HTML, ARIA-compliant dropdowns, and custom implementations
+ * Framework-agnostic: Supports React, Angular, Vue, Svelte, Bootstrap, etc.
  */
 public class DynamicDropdownXPathBuilder {
 
     private static final LoggerUtil logger = LoggerUtil.getLogger(DynamicDropdownXPathBuilder.class);
 
+    /**
+     * Dropdown categories based on capabilities, not framework names
+     */
     public enum DropdownType {
-        STANDARD_SELECT,
-        REACT_SELECT,
-        MATERIAL_UI,
-        ANT_DESIGN,
-        CHAKRA_UI,
-        BOOTSTRAP,
-        CUSTOM_DIV
+        NATIVE_SELECT,      // Standard HTML <select> element
+        ARIA_COMPLIANT,     // Uses ARIA roles (role='combobox', role='option')
+        CUSTOM_DROPDOWN     // Custom implementation (div-based, requires detection)
     }
 
     /**
-     * Analyze the dropdown wrapper and determine its type
+     * Analyze the dropdown wrapper and determine its type based on capabilities
      */
     public Map<String, Object> analyzeDropdown(Page page, Locator dropdownWrapper) {
         Map<String, Object> metadata = new HashMap<>();
@@ -44,142 +44,120 @@ public class DynamicDropdownXPathBuilder {
             DropdownType type = detectType(tagName, className, role, dataTestId);
             metadata.put("type", type);
             
+            // Store framework hint for logging only (not used in logic)
+            String frameworkHint = detectFrameworkHint(className);
+            metadata.put("frameworkHint", frameworkHint);
+            
             logger.debug("Dropdown Analysis:");
             logger.debug("   Tag: {}", tagName);
             logger.debug("   Class: {}", className);
             logger.debug("   Role: {}", role);
             logger.debug("   Detected Type: {}", type);
+            if (!frameworkHint.isEmpty()) {
+                logger.debug("   Framework Hint: {} (for logging only)", frameworkHint);
+            }
             
             return metadata;
         } catch (Exception e) {
             logger.error("Failed to analyze dropdown: {}", e.getMessage());
-            metadata.put("type", DropdownType.CUSTOM_DIV);
+            metadata.put("type", DropdownType.CUSTOM_DROPDOWN);
             return metadata;
         }
     }
 
     /**
-     * Detect dropdown framework based on HTML attributes
+     * Detect dropdown type based on CAPABILITIES, not framework names
+     * Priority: Native HTML > ARIA-compliant > Custom
      */
     private DropdownType detectType(String tag, String className, String role, String dataTestId) {
-        // Standard HTML select
+        // Priority 1: Native HTML <select>
         if ("select".equals(tag)) {
-            return DropdownType.STANDARD_SELECT;
+            return DropdownType.NATIVE_SELECT;
         }
         
-        // React-Select (class contains "react-select" or "__control")
-        if (className.contains("react-select") || className.contains("__control") || className.contains("__value-container")) {
-            return DropdownType.REACT_SELECT;
+        // Priority 2: ARIA-compliant (uses standard roles)
+        if ("combobox".equals(role) || "listbox".equals(role) || "button".equals(role)) {
+            return DropdownType.ARIA_COMPLIANT;
         }
         
-        // Material-UI (MUI)
-        if (className.contains("MuiSelect") || className.contains("MuiInput") || "button".equals(role) && className.contains("Mui")) {
-            return DropdownType.MATERIAL_UI;
-        }
-        
-        // Ant Design
-        if (className.contains("ant-select") || className.contains("ant-picker")) {
-            return DropdownType.ANT_DESIGN;
-        }
-        
-        // ChakraUI
-        if (className.contains("chakra-select") || className.contains("css-")) {
-            return DropdownType.CHAKRA_UI;
-        }
-        
-        // Bootstrap
-        if (className.contains("dropdown") || className.contains("form-select") || className.contains("btn-group")) {
-            return DropdownType.BOOTSTRAP;
-        }
-        
-        // Default to custom div-based
-        return DropdownType.CUSTOM_DIV;
+        // Priority 3: Custom dropdown (div-based, any framework)
+        return DropdownType.CUSTOM_DROPDOWN;
+    }
+    
+    /**
+     * Detect framework for logging purposes only (not used in selection logic)
+     * This helps developers understand what framework is being used
+     */
+    private String detectFrameworkHint(String className) {
+        if (className.contains("react-select")) return "React-Select";
+        if (className.contains("MuiSelect") || className.contains("Mui")) return "Material-UI";
+        if (className.contains("ant-select")) return "Ant Design";
+        if (className.contains("chakra")) return "Chakra UI";
+        if (className.contains("vue-select") || className.contains("v-select")) return "Vue-Select";
+        if (className.contains("ng-select")) return "Angular ng-select";
+        if (className.contains("dropdown") || className.contains("form-select")) return "Bootstrap (or generic)";
+        return "";
     }
 
     /**
-     * Build XPath to find the actual interactive element
+     * Build XPath to find the actual interactive element based on capabilities
      */
     public String buildDropdownTriggerXPath(Locator wrapper, DropdownType type) {
         switch (type) {
-            case STANDARD_SELECT:
-                return "."; // The wrapper itself is the select
+            case NATIVE_SELECT:
+                // The wrapper itself is the <select> element
+                return ".";
                 
-            case REACT_SELECT:
-                // React-Select: look for the input or the control div
-                return ".//*[contains(@class, '__control') or contains(@class, '__input')]";
+            case ARIA_COMPLIANT:
+                // ARIA-compliant: look for elements with standard roles
+                return ".//*[@role='button' or @role='combobox' or @role='listbox']";
                 
-            case MATERIAL_UI:
-                // MUI: look for the button or input with role
-                return ".//*[@role='button' or @role='combobox']";
-                
-            case ANT_DESIGN:
-                // Ant Design: look for selector or input
-                return ".//*[contains(@class, 'ant-select-selector')]";
-                
-            case CHAKRA_UI:
-                // ChakraUI: look for select element
-                return ".//select";
-                
-            case BOOTSTRAP:
-                // Bootstrap: look for button or select
-                return ".//button[@data-toggle='dropdown'] | .//select";
-                
-            case CUSTOM_DIV:
+            case CUSTOM_DROPDOWN:
             default:
-                // For custom, try common patterns
-                return ".//*[@role='combobox' or @role='button' or @role='listbox']";
+                // Custom: try common patterns (input for searchable, or clickable div)
+                return ".//*[@role='combobox'] | .//input | .//button | .//*[contains(@class, 'control')]";
         }
     }
 
     /**
-     * Build XPath to find dropdown options after opening
+     * Build XPath to find dropdown options (framework-agnostic)
+     * Priority: ARIA role > Native option > Generic patterns
      */
     public String buildOptionsXPath(DropdownType type, String optionText) {
         switch (type) {
-            case STANDARD_SELECT:
+            case NATIVE_SELECT:
+                // Native <select>: look for <option> elements
                 return String.format("//option[text()='%s' or @value='%s']", optionText, optionText);
                 
-            case REACT_SELECT:
-                return String.format("//*[contains(@class, '__option') and contains(text(), '%s')]", optionText);
-                
-            case MATERIAL_UI:
-                return String.format("//li[@role='option' and contains(., '%s')]", optionText);
-                
-            case ANT_DESIGN:
-                return String.format("//*[contains(@class, 'ant-select-item') and contains(., '%s')]", optionText);
-                
-            case CHAKRA_UI:
-                return String.format("//option[text()='%s']", optionText);
-                
-            case BOOTSTRAP:
-                return String.format("//a[contains(@class, 'dropdown-item') and contains(., '%s')]", optionText);
-                
-            case CUSTOM_DIV:
+            case ARIA_COMPLIANT:
+            case CUSTOM_DROPDOWN:
             default:
-                // Generic fallback
-                return String.format("//*[@role='option' and contains(., '%s')] | " +
-                                   "//*[contains(@class, 'option') and contains(., '%s')] | " +
-                                   "//li[contains(., '%s')]", 
-                                   optionText, optionText, optionText);
+                // ARIA / Custom: Use generic pattern that works across all frameworks
+                // Priority: role='option' > generic classes > list items
+                return String.format(
+                    "//*[@role='option' and contains(., '%s')] | " +
+                    "//*[contains(@class, 'option') and contains(., '%s')] | " +
+                    "//*[contains(@class, 'item') and contains(., '%s')] | " +
+                    "//li[contains(., '%s')]",
+                    optionText, optionText, optionText, optionText
+                );
         }
     }
 
     /**
-     * Get the interaction strategy for this dropdown type
+     * Get interaction strategy based on dropdown capabilities (not framework)
      */
     public InteractionStrategy getInteractionStrategy(DropdownType type) {
         switch (type) {
-            case STANDARD_SELECT:
-                return new InteractionStrategy(false, "selectOption"); // Use Playwright's selectOption()
+            case NATIVE_SELECT:
+                // Native <select>: Use Playwright's built-in selectOption()
+                return new InteractionStrategy(false, "selectOption");
                 
-            case REACT_SELECT:
-            case MATERIAL_UI:
-            case ANT_DESIGN:
-            case BOOTSTRAP:
-            case CHAKRA_UI:
-            case CUSTOM_DIV:
+            case ARIA_COMPLIANT:
+            case CUSTOM_DROPDOWN:
             default:
-                return new InteractionStrategy(true, "clickAndSelect"); // Click to open, then click option
+                // All custom dropdowns: Click to open, then click option
+                return new InteractionStrategy(true, "clickAndSelect");
         }
     }
 

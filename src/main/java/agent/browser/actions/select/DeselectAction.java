@@ -9,7 +9,7 @@ import com.microsoft.playwright.Page;
 
 /**
  * Handles deselecting options from multiselect dropdowns.
- * For React-Select multiselect, this clicks the "x" button on selected chips/tags.
+ * Works with chips/tags from: React-Select, Angular Material, Vue, etc.
  */
 public class DeselectAction implements BrowserAction {
     
@@ -37,7 +37,7 @@ public class DeselectAction implements BrowserAction {
             // For native multiselect, deselect the option
             return handleNativeDeselect(dropdownWrapper, optionToRemove, dropdownLabel);
         } else {
-            // For custom dropdowns (React-Select), click the remove button on the selected chip
+            // For custom dropdowns (all frameworks), click the remove button on the selected chip
             return handleCustomDeselect(page, dropdownWrapper, optionToRemove, dropdownLabel);
         }
     }
@@ -89,19 +89,42 @@ public class DeselectAction implements BrowserAction {
             
             logger.debug("Wrapper ID: '{}', Class: '{}'", wrapperId, wrapperClass);
             
-            // Strategy 1: React-Select multiselect uses chips/tags with remove buttons
-            // The structure is typically: <div class="*-multiValue"><div>OptionText</div><div class="*-multiValueRemove">x</div></div>
+            // Strategy 1: Multi-select uses chips/tags with remove buttons
+            // Generic pattern that works across frameworks:
+            // - React-Select: div[class*='multiValue']
+            // - Angular Material: mat-chip
+            // - Vue/Bootstrap: span.badge, span.tag
+            // Strategy: Look for elements with 'multi', 'chip', 'tag', 'badge' in class + option text
             
-            // Find the chip/tag containing the option text
-            String multiValueSelector = String.format("div[class*='multiValue']:has-text(\"%s\")", optionText);
-            Locator chip = wrapper.locator(multiValueSelector).first();
+            // Find the chip/tag containing the option text (framework-agnostic selectors)
+            String chipSelector = String.format(
+                "div[class*='multiValue']:has-text(\"%s\"), " +
+                "mat-chip:has-text(\"%s\"), " +
+                "span[class*='chip']:has-text(\"%s\"), " +
+                "span[class*='tag']:has-text(\"%s\"), " +
+                "span[class*='badge']:has-text(\"%s\")",
+                optionText, optionText, optionText, optionText, optionText
+            );
+            Locator chip = wrapper.locator(chipSelector).first();
             
             if (chip.count() > 0 && chip.isVisible()) {
                 logger.debug("Found selected chip for '{}'", optionText);
                 
-                // Find the remove button within this chip
-                // React-Select uses various patterns: svg with data-* attributes, divs with remove classes, or clickable elements
-                Locator removeButton = chip.locator("svg, div[role='button'], *[aria-label*='remove'], *[class*='Remove'], *[class*='remove'], *[class*='clear']").first();
+                // Find the remove button within this chip (works across frameworks)
+                // Patterns: SVG icons, close buttons, aria-label="remove", or clickable divs
+                Locator removeButton = chip.locator(
+                    "svg, " +
+                    "button, " +
+                    "div[role='button'], " +
+                    "*[aria-label*='remove'], " +
+                    "*[aria-label*='close'], " +
+                   "*[aria-label*='delete'], " +
+                    "*[class*='Remove'], " +
+                    "*[class*='remove'], " +
+                    "*[class*='close'], " +
+                    "*[class*='clear'], " +
+                    "*[class*='delete']"
+                ).first();
                 
                 if (removeButton.count() > 0) {
                     logger.debug("Clicking remove button");

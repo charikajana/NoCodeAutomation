@@ -10,7 +10,7 @@ Feature: Complete Form Submission Flow
     And I enter "Doe" in last name
     And I type "john.doe@example.com" in email
     And I click Male radio button
-    And I enter "1234567890" in mobile number
+    And I enter "1234567890" in Mobile Number
     
     # Address
     And I enter "123 Main Street, Apt 4B" in current address
@@ -27,7 +27,7 @@ Feature: Complete Form Submission Flow
     And I click submit button
     Then Verify "first name" field is invalid
     And Verify "last name" field has red border
-    And Verify "mobile number" shows error
+    And Verify "Mobile Number" shows error
     # These steps now use the new VerifyValidationAction to check CSS/HTML validation
 
   Scenario: Fill form fields and verify
@@ -43,7 +43,7 @@ Feature: Complete Form Submission Flow
     And I enter "Johnson" in last name  
     And I enter "bob@example.com" in email
     And I click Female radio button
-    And I enter "9876543210" in mobile number
+    And I enter "9876543210" in Mobile Number
     And I enter "456 Oak Avenue" in current address
     And I click submit button
     Then Verify "Thanks for submitting the form" is displayed

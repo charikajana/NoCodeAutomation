@@ -191,27 +191,48 @@ public class LocatorFactory {
                  return sibling;
              }
 
-             // 4. Before checking cousins, check for React-Select/custom dropdowns
-             // This prevents false matches with unrelated select elements on the page
+             // 4. Before checking cousins, check for custom dropdowns (framework-agnostic)
+             // Works with: React-Select, Angular Material, Vue-Select, Bootstrap, etc.
              logger.debug("No <select> found in immediate vicinity. Checking for custom dropdown patterns");
              
-             // 4a. Check for React-Select container as direct sibling of the label
-             // Pattern: <p>Label</p> <div class="react-select-container">...</div>
-             // OR: <p><b>Label</b></p> <div class="react-select-container">...</div> (check parent's sibling)
-             Locator reactSelectSibling = finalLocator.locator("xpath=following-sibling::*[1][contains(@class, 'container') or contains(@class, '-container') or contains(@id, 'react-select')]").first();
-             if (reactSelectSibling.count() > 0) {
-                 logger.debug("Found React-Select container as next sibling of label, refining to it");
-                 return reactSelectSibling;
+             // 4a. Check for custom dropdown container as direct sibling of the label
+             // Generic patterns that work across frameworks:
+             // - Contains 'container', 'select', 'dropdown'
+             // - Has role='combobox' or role='listbox'
+             // - Has data-* attributes for selects
+             Locator dropdownSibling = finalLocator.locator(
+                 "xpath=following-sibling::*[1][" +
+                 "contains(@class, 'container') or " +
+                 "contains(@class, '-container') or " +
+                 "contains(@class, 'select') or " +
+                 "contains(@class, 'dropdown') or " +
+                 "@role='combobox' or " +
+                 "@role='listbox' or " +
+                 "@data-select" +
+                 "]"
+             ).first();
+             if (dropdownSibling.count() > 0) {
+                 logger.debug("Found custom dropdown container as next sibling of label, refining to it");
+                 return dropdownSibling;
              }
              
-             // 4a-ii. If not found, check parent's next sibling (handles nested labels like <p><b>Text</b></p>)
-             Locator parentSibling = finalLocator.locator("xpath=../following-sibling::*[1][contains(@class, 'container') or contains(@class, '-container') or contains(@id, 'react-select')]").first();
+             // 4a-ii. Check parent's next sibling (handles nested labels like <p><b>Text</b></p>)
+             Locator parentSibling = finalLocator.locator(
+                 "xpath=../following-sibling::*[1][" +
+                 "contains(@class, 'container') or " +
+                 "contains(@class, '-container') or " +
+                 "contains(@class, 'select') or " +
+                 "contains(@class, 'dropdown') or " +
+                 "@role='combobox' or " +
+                 "@role='listbox'" +
+                 "]"
+             ).first();
              if (parentSibling.count() > 0) {
-                 logger.debug("Found React-Select container as next sibling of label's parent, refining to it");
+                 logger.debug("Found custom dropdown container as next sibling of label's parent, refining to it");
                  return parentSibling;
              }
              
-             // 4b. Check for React-Select or native select in parent's next sibling (nested layouts)
+             // 4b. Check for custom dropdown or native select in parent's next sibling (nested layouts)
             // Pattern: <div><p><b>Label</b></p></div> <div><select>...</select></div>
             Locator parentNextSibling = parent.locator("xpath=following-sibling::*[1]").first();
             if (parentNextSibling.count() > 0) {
@@ -222,11 +243,18 @@ public class LocatorFactory {
                     return nestedSelect;
                 }
                 
-                // Check for custom dropdowns
-                Locator nestedReactSelect = parentNextSibling.locator("div[class*='container'], div[class*='-container'], div[id*='react-select'], div[id*='OptGroup']").first();
-                if (nestedReactSelect.count() > 0) {
-                    logger.debug("Found React-Select container in parent's next sibling, refining to it");
-                    return nestedReactSelect;
+                // Check for custom dropdowns (framework-agnostic)
+                Locator nestedDropdown = parentNextSibling.locator(
+                    "div[class*='container'], " +
+                    "div[class*='-container'], " +
+                    "div[class*='select'], " +
+                    "div[class*='dropdown'], " +
+                    "[role='combobox'], " +
+                    "[role='listbox']"
+                ).first();
+                if (nestedDropdown.count() > 0) {
+                    logger.debug("Found custom dropdown container in parent's next sibling, refining to it");
+                    return nestedDropdown;
                 }
             }
              

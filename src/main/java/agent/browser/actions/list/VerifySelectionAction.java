@@ -76,7 +76,7 @@ public class VerifySelectionAction implements BrowserAction {
         List<String> selectedItems = new ArrayList<>();
         
         try {
-            // Strategy 1: Find by 'active' class (Bootstrap list-group pattern)
+            // Strategy 1: Find by 'active' class (common across frameworks)
             Locator activeItems = page.locator(".list-group-item.active, [role='listitem'].active");
             
             if (activeItems.count() > 0) {

@@ -23,8 +23,8 @@ public class VerifyModalAction implements BrowserAction {
         logger.info("Verifying modal visibility: Title='{}'", expectedTitle != null ? expectedTitle : "Any");
         
         try {
-            // Locate the active modal
-            // Strategy 1: Look for bootstrap 'modal show'
+            // Locate the active modal using generic patterns
+            // Works with: Bootstrap, Material-UI, custom modals
             Locator modal = page.locator(".modal.show, .modal-dialog, [role='dialog']").first();
             
             if (isNegative) {

@@ -185,13 +185,13 @@ public class SelectAction implements BrowserAction {
             // Step 1: Open dropdown (only if not already open)
             if (isFirstSelection) {
                 try {
-                    // PRE-FLIGHT: Check if autocomplete suggestions already visible (from previous Enter step)
-                    Locator visibleSuggestions = page.locator("[id*='react-select'][id*='option'], div[class*='option'], [role='option']");
+                    // PRE-FLIGHT: Check if suggestions already visible (framework-agnostic)
+                    Locator visibleSuggestions = page.locator("[role='option'], div[class*='option'], li[class*='option']");
                     boolean suggestionsAlreadyVisible = false;
                     try {
                         visibleSuggestions.first().waitFor(new Locator.WaitForOptions().setTimeout(500).setState(com.microsoft.playwright.options.WaitForSelectorState.VISIBLE));
                         if (visibleSuggestions.count() > 0) {
-                            logger.info("✓ Autocomplete suggestions already visible (count={}), skipping click/type", visibleSuggestions.count());
+                            logger.info("✓ Dropdown suggestions already visible (count={}), skipping click/type", visibleSuggestions.count());
                             suggestionsAlreadyVisible = true;
                         }
                     } catch (Exception ignored) {}
@@ -204,10 +204,10 @@ public class SelectAction implements BrowserAction {
                         if (menuAlreadyOpen) {
                             logger.debug("Menu is already open, skipping click");
                     } else {
-                        // Try clicking the control div specifically for React-Select
+                        // Try clicking the control div (common pattern across frameworks)
                         Locator control = wrapper.locator("[class*='control'], [class*='css-'][class*='-control']").first();
                         if (control.count() > 0) {
-                            logger.debug("Clicking React-Select control");
+                            logger.debug("Clicking dropdown control");
                             control.click(new Locator.ClickOptions().setTimeout(5000));
                         } else {
                             logger.debug("Clicking dropdown wrapper");
@@ -236,7 +236,7 @@ public class SelectAction implements BrowserAction {
                                 Thread.sleep(1200); // Wait for suggestions to filter
                             } else {
                                 logger.debug("No input found, waiting for any options to appear...");
-                                page.locator("[id*='react-select'][id*='option'], div[class*='option'], [role='option']")
+                                page.locator("[role='option'], div[class*='option'], li[class*='option']")
                                     .first()
                                     .waitFor(new Locator.WaitForOptions().setTimeout(5000).setState(com.microsoft.playwright.options.WaitForSelectorState.VISIBLE));
                                 logger.debug("Options appeared");
@@ -264,111 +264,172 @@ public class SelectAction implements BrowserAction {
 
     /**
      * Select an option from an already-open menu.
-     * This method assumes the menu is visible and searches for the option.
+     * Uses framework-agnostic strategies first, framework-specific as fallbacks.
+     * 
+     * Strategy Order (Generic → Specific):
+     * 1. ARIA role='option' (WCAG standard - works with all frameworks)
+     * 2. Native HTML <option> (standard HTML)
+     * 3. Generic class patterns (option, item, choice)
+     * 4. Framework-specific fallbacks (React, Angular, Vue)
      */
     private boolean selectOptionFromOpenMenu(Page page, String optionText, String label) {
         // FIRST: Check if this option is already selected (appears as a chip/tag)
-        // This is important for multiselect dropdowns where already-selected options don't appear in the menu
-        Locator selectedChip = page.locator(String.format("div[class*='multiValue']:has-text(\"%s\")", optionText)).first();
-        if (selectedChip.count() > 0 && selectedChip.isVisible()) {
+        // Works across frameworks: React-Select, Angular Material, Vue
+        boolean alreadySelected = isOptionAlreadySelected(page, optionText);
+        if (alreadySelected) {
             logger.debug("Option '{}' is already selected, skipping", optionText);
-            return true; // Already selected, no need to select again
+            return true;
         }
         
         Locator option = null;
         
-        // Try multiple strategies in order of specificity
-        
-        // STRATEGY 1: React-Select with ID pattern (most reliable for React-Select)
-        String reactSelectIdPattern = String.format("div[id^='react-select-'][id*='-option-']:has-text(\"%s\")", optionText);
-        option = page.locator(reactSelectIdPattern).first();
-        if (option.count() > 0 && option.isVisible()) {
-            logger.debug("Found option using React-Select ID pattern");
-            option.click();
-            logger.success("Selected '{}' from dropdown '{}'", optionText, label);
-            return true;
-        }
-        logger.debug("React-Select ID pattern didn't match");
-        
-        // STRATEGY 2: React-Select with class pattern
-        String reactSelectClassPattern = String.format("div[class*='option']:has-text(\"%s\")", optionText);
-        option = page.locator(reactSelectClassPattern).first();
-        if (option.count() > 0 && option.isVisible()) {
-            logger.debug("Found option using React-Select class pattern");
-            option.click();
-            logger.success("Selected '{}' from dropdown '{}'", optionText, label);
-            return true;
-        }
-        logger.debug("React-Select class pattern didn't match");
-        
-        // STRATEGY 3: XPath-based React-Select pattern
-        option = page.locator(String.format("//div[starts-with(@id, 'react-select-') and contains(@id, '-option-') and contains(text(), '%s')]", optionText)).first();
-        if (option.count() > 0 && option.isVisible()) {
-            logger.debug("Found option using React-Select XPath pattern");
-            option.click();
-            logger.success("Selected '{}' from dropdown '{}'", optionText, label);
-            return true;
-        }
-        logger.debug("React-Select XPath pattern didn't match");
-        
-        // STRATEGY 4: Role-based search (ARIA-compliant dropdowns)
+        // === PRIORITY 1: ARIA ROLE (Framework-Agnostic Standard) ===
         option = page.getByRole(com.microsoft.playwright.options.AriaRole.OPTION,
                 new Page.GetByRoleOptions().setName(optionText)).first();
         if (option.count() > 0 && option.isVisible()) {
-            logger.debug("Found option using ARIA role");
+            logger.debug("Found option using ARIA role (framework-agnostic)");
             option.click();
             logger.success("Selected '{}' from dropdown '{}'", optionText, label);
             return true;
         }
         logger.debug("ARIA role pattern didn't match");
         
-        // STRATEGY 5: Generic visible text search (last resort)
-        option = page.getByText(optionText, new Page.GetByTextOptions().setExact(true)).first();
+        // === PRIORITY 2: Native HTML <option> (ONLY if visible) ===
+        // Note: We check visibility to avoid matching options in hidden native <select> elements
+        option = page.locator("option").filter(
+            new Locator.FilterOptions().setHasText(optionText)
+        ).first();
         if (option.count() > 0 && option.isVisible()) {
-            logger.debug("Found option using generic visible text search");
+            logger.debug("Found native <option> element");
             option.click();
             logger.success("Selected '{}' from dropdown '{}'", optionText, label);
             return true;
         }
-        logger.debug("Generic text search didn't match");
+        logger.debug("Native <option> pattern didn't match");
         
-        logger.failure("Option '{}' not found or not visible after opening dropdown", optionText);
-        logger.error("Tried all strategies: React-Select (ID, class, XPath), ARIA, and generic text");
+        // === PRIORITY 3: Generic Class Patterns ===
+        // Covers: li.option, div.item, span.choice, etc.
+        String genericPattern = String.format(
+            "li:has-text(\"%s\"), " +
+            "div[class*='item']:has-text(\"%s\"), " +
+            "span[class*='option']:has-text(\"%s\"), " +
+            "div[class*='choice']:has-text(\"%s\")",
+            optionText, optionText, optionText, optionText
+        );
+        option = page.locator(genericPattern).first();
+        if (option.count() > 0 && option.isVisible()) {
+            logger.debug("Found option using generic class pattern");
+            option.click();
+            logger.success("Selected '{}' from dropdown '{}'",optionText, label);
+            return true;
+        }
+        logger.debug("Generic class pattern didn't match");
+        
+        // === PRIORITY 4: Generic Text Match ===
+        option = page.getByText(optionText, new Page.GetByTextOptions().setExact(true)).first();
+        if (option.count() > 0 && option.isVisible()) {
+            logger.debug("Found option using generic text match");
+            option.click();
+            logger.success("Selected '{}' from dropdown '{}'", optionText, label);
+            return true;
+        }
+        logger.debug("Generic text match didn't match");
+        
+        // === FALLBACK: Framework-Specific Patterns ===
+        // Only try these if generic patterns failed
+        logger.debug("Trying framework-specific fallback patterns...");
+        
+        // React-Select patterns
+       option = tryReactSelectPatterns(page, optionText);
+        if (option != null && option.count() > 0 && option.isVisible()) {
+            logger.debug("Found option using React-Select fallback");
+            option.click();
+            logger.success("Selected '{}' from dropdown '{}'", optionText, label);
+            return true;
+        }
+        
+        logger.failure("Option '{}' not found using any strategy", optionText);
+        logger.error("Tried: ARIA role, native <option>, generic patterns, text match, React-Select");
         return false;
+    }
+    
+    /**
+     * Check if option is already selected across different frameworks
+     */
+    private boolean isOptionAlreadySelected(Page page, String optionText) {
+        // React-Select: multiValue chips
+        Locator reactChip = page.locator(String.format("div[class*='multiValue']:has-text(\"%s\")", optionText)).first();
+        if (reactChip.count() > 0 && reactChip.isVisible()) {
+            return true;
+        }
+        
+        // Angular Material: mat-chip
+        Locator matChip = page.locator(String.format("mat-chip:has-text(\"%s\")", optionText)).first();
+        if (matChip.count() > 0 && matChip.isVisible()) {
+            return true;
+        }
+        
+        // Generic: any element with 'chip' or 'tag' class
+        Locator genericChip = page.locator(String.format("*[class*='chip']:has-text(\"%s\"), *[class*='tag']:has-text(\"%s\")", optionText, optionText)).first();
+        if (genericChip.count() > 0 && genericChip.isVisible()) {
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Try React-Select specific patterns (as fallback only)
+     */
+    private Locator tryReactSelectPatterns(Page page, String optionText) {
+        // Pattern 1: ID-based
+        String idPattern = String.format("div[id^='react-select-'][id*='-option-']:has-text(\"%s\")", optionText);
+        Locator option = page.locator(idPattern).first();
+        if (option.count() > 0 && option.isVisible()) {
+            return option;
+        }
+        
+        // Pattern 2: Class-based
+        String classPattern = String.format("div[class*='option']:has-text(\"%s\")", optionText);
+        option = page.locator(classPattern).first();
+        if (option.count() > 0 && option.isVisible()) {
+            return option;
+        }
+        
+        // Pattern 3: XPath-based
+        option = page.locator(String.format("//div[starts-with(@id, 'react-select-') and contains(@id, '-option-') and contains(text(), '%s')]", optionText)).first();
+        if (option.count() > 0 && option.isVisible()) {
+            return option;
+        }
+        
+        return null;
     }
 
     /**
-     * Universal handler for custom dropdowns (React-Select, MUI, Ant Design, etc.)
-     * 
-     * Strategy:
-     * 1. Click the wrapper to open the dropdown
-     * 2. Wait for options menu to appear
-     * 3. Find and click the matching option
+     * Universal handler for custom dropdowns (works with ANY framework)
+     * Strategy: Click to open, then use framework-agnostic option finding
      */
     private boolean handleCustomDropdown(Page page, Locator wrapper, String optionText, String label) {
         try {
             logger.success("Custom dropdown detected");
             
-            // For multiselect, check if this option is already selected
-            // Selected options appear as chips/tags with class containing 'multiValue'
-            Locator selectedChip = wrapper.locator(String.format("div[class*='multiValue']:has-text(\"%s\")", optionText)).first();
-            if (selectedChip.count() > 0 && selectedChip.isVisible()) {
+            // Check if this option is already selected (multiselect)
+            if (isOptionAlreadySelected(page, optionText)) {
                 logger.debug("Option '{}' is already selected in multiselect, skipping", optionText);
                 return true;
             }
             
-            // Get the wrapper's ID or class to scope our searches
+            // Get wrapper info for logging
             String wrapperId = (String) wrapper.evaluate("el => el.id || ''");
             String wrapperClass = (String) wrapper.evaluate("el => el.className || ''");
-            
             logger.debug("Wrapper ID: '{}', Class: '{}'", wrapperId, wrapperClass);
             
             // Step 1: Click to open dropdown
             try {
-                // Try clicking the control div specifically for React-Select
+                // Try clicking the control div if it exists (common pattern)
                 Locator control = wrapper.locator("[class*='control'], [class*='css-'][class*='-control']").first();
                 if (control.count() > 0) {
-                    logger.debug("Clicking React-Select control...");
+                    logger.debug("Clicking dropdown control...");
                     control.click(new Locator.ClickOptions().setTimeout(5000));
                 } else {
                     logger.debug("Clicking dropdown wrapper...");
@@ -378,16 +439,15 @@ public class SelectAction implements BrowserAction {
                 logger.debug("Clicked dropdown, waiting for options menu...");
                 Thread.sleep(500); // Wait for animation
                 
-                // Wait for menu container to appear within the wrapper (React-Select specific)
-                // React-Select creates a menu div inside the wrapper after clicking
+                // Wait for menu container to appear
                 Locator menu = wrapper.locator("[class*='menu']").first();
                 if (menu.count() > 0) {
                     menu.waitFor(new Locator.WaitForOptions().setTimeout(5000));
                     logger.debug("Dropdown menu container appeared");
                 } else {
-                    // Fallback: wait for any option elements to appear
-                    logger.debug("No menu container found, waiting for options...");
-                    page.locator("[id*='react-select'][id*='option'], div[class*='option'], [role='option']")
+                    // Fallback: wait for any option elements using generic selectors
+                    logger.debug("No menu container found, waiting for options using generic selectors...");
+                    page.locator("[role='option'], li, div[class*='option'], div[class*='item']")
                         .first()
                         .waitFor(new Locator.WaitForOptions().setTimeout(5000).setState(com.microsoft.playwright.options.WaitForSelectorState.VISIBLE));
                     logger.debug("Options appeared");
@@ -399,90 +459,8 @@ public class SelectAction implements BrowserAction {
                 // Don't fail immediately, try to find options anyway
             }
             
-            // Step 2: Find the option in the newly appeared menu
-            // Try multiple strategies in order of specificity
-            
-            Locator option = null;
-            
-            // STRATEGY 1: React-Select with ID pattern (most reliable for React-Select)
-            // Pattern: div[id^="react-select-"][id*="-option-"]
-            String reactSelectIdPattern = String.format("div[id^='react-select-'][id*='-option-']:has-text(\"%s\")", optionText);
-            option = page.locator(reactSelectIdPattern).first();
-            if (option.count() > 0 && option.isVisible()) {
-                logger.debug("Found option using React-Select ID pattern");
-                option.click();
-                logger.success("Selected '{}' from dropdown '{}'", optionText, label);
-                return true;
-            }
-            logger.debug("React-Select ID pattern didn't match");
-            
-            // STRATEGY 2: React-Select with class pattern
-            // Pattern: div[class*="option"]:has-text("...")
-            String reactSelectClassPattern = String.format("div[class*='option']:has-text(\"%s\")", optionText);
-            option = page.locator(reactSelectClassPattern).first();
-            if (option.count() > 0 && option.isVisible()) {
-                logger.debug("Found option using React-Select class pattern");
-                option.click();
-                logger.success("Selected '{}' from dropdown '{}'", optionText, label);
-                return true;
-            }
-            logger.debug("React-Select class pattern didn't match");
-            
-            // STRATEGY 3: XPath-based React-Select pattern (more flexible text matching)
-            option = page.locator(String.format("//div[starts-with(@id, 'react-select-') and contains(@id, '-option-') and contains(text(), '%s')]", optionText)).first();
-            if (option.count() > 0 && option.isVisible()) {
-                logger.debug("Found option using React-Select XPath pattern");
-                option.click();
-                logger.success("Selected '{}' from dropdown '{}'", optionText, label);
-                return true;
-            }
-            logger.debug("React-Select XPath pattern didn't match");
-            
-            // STRATEGY 4: Role-based search (ARIA-compliant dropdowns like Material-UI)
-            option = page.getByRole(com.microsoft.playwright.options.AriaRole.OPTION,
-                    new Page.GetByRoleOptions().setName(optionText)).first();
-            if (option.count() > 0 && option.isVisible()) {
-                logger.debug("Found option using ARIA role");
-                option.click();
-                logger.success("Selected '{}' from dropdown '{}'", optionText, label);
-                return true;
-            }
-            logger.debug("ARIA role pattern didn't match");
-            
-            // STRATEGY 5: Material-UI pattern
-            option = page.locator(String.format("//li[@role='option' and contains(., '%s')]", optionText)).first();
-            if (option.count() > 0 && option.isVisible()) {
-                logger.debug("Found option using Material-UI pattern");
-                option.click();
-                logger.success("Selected '{}' from dropdown '{}'", optionText, label);
-                return true;
-            }
-            logger.debug("Material-UI pattern didn't match");
-            
-            // STRATEGY 6: Ant Design pattern
-            option = page.locator(String.format("//*[contains(@class, 'ant-select-item') and contains(., '%s')]", optionText)).first();
-            if (option.count() > 0 && option.isVisible()) {
-                logger.debug("Found option using Ant Design pattern");
-                option.click();
-                logger.success("Selected '{}' from dropdown '{}'", optionText, label);
-                return true;
-            }
-            logger.debug("Ant Design pattern didn't match");
-            
-            // STRATEGY 7: Generic visible text search (last resort - very broad)
-            // Look for any visible element with exact text match
-            option = page.getByText(optionText, new Page.GetByTextOptions().setExact(true)).first();
-            if (option.count() > 0 && option.isVisible()) {
-                logger.debug("Found option using generic visible text search");
-                option.click();
-                logger.success("Selected '{}' from dropdown '{}'", optionText, label);
-                return true;
-            }
-            logger.debug("Generic text search didn't match");
-            
-            logger.failure("Option '{}' not found or not visible after opening dropdown", optionText);
-            logger.error("Tried all strategies: React-Select (ID, class, XPath), ARIA, Material-UI, Ant Design, and generic text");
-            return false;
+            // Step 2: Find and select the option using framework-agnostic strategies
+            return selectOptionFromOpenMenu(page, optionText, label);
             
         } catch (Exception e) {
             logger.error("Custom dropdown interaction failed. Error: {}", e.getMessage());
