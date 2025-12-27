@@ -18,11 +18,22 @@ public class FillAction implements BrowserAction {
         String value = plan.getValue();
 
         // 1. Try to use intelligent locator if already found during planning
+        // BUT: Check if we're still on the same page! Window switches can invalidate pre-resolved locators
         if (plan.hasMetadata("intelligent_locator")) {
             Locator intelligentLocator = (Locator) plan.getMetadataValue("intelligent_locator");
+            String resolvedPageUrl = (String) plan.getMetadataValue("resolved_page_url");
+            String currentPageUrl = page.url();
+            
             if (intelligentLocator != null) {
-                logger.debug("Using pre-resolved intelligent locator for: {}", targetName);
-                return performFill(intelligentLocator, targetName, value);
+                // Check if page URL changed since locator was resolved
+                if (resolvedPageUrl != null && !resolvedPageUrl.equals(currentPageUrl)) {
+                    logger.warn("Page URL changed from '{}' to '{}' - discarding stale pre-resolved locator and re-resolving",
+                        resolvedPageUrl, currentPageUrl);
+                    // Don't use the stale locator - fall through to re-resolve
+                } else {
+                    logger.debug("Using pre-resolved intelligent locator for: {}", targetName);
+                    return performFill(intelligentLocator, targetName, value);
+                }
             }
         }
 

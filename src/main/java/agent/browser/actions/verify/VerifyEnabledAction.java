@@ -39,7 +39,7 @@ public class VerifyEnabledAction implements BrowserAction {
         String actionType = plan.getActionType();
         boolean expectEnabled = !"verify_disabled".equals(actionType);
 
-        Locator element = locator.waitForSmartElement(targetName, null, scope, plan.getFrameAnchor());
+        Locator element = locator.waitForSmartElement(targetName, null, scope, plan.getFrameAnchor(), true);
         
         if (element != null) {
             boolean isEnabled = element.isEnabled();

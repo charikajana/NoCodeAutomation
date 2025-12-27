@@ -35,13 +35,21 @@ public class DomScanner {
 
     @SuppressWarnings("unchecked")
     private List<ElementCandidate> scanInternal(Page page, Frame frame, Locator scope, boolean includeHidden) {
-        String js = "includeHidden => root => {" +
-                "  const base = root || document;" +
+        // Robust JS that handles both Page/Frame (root is null/document) and Locator (root is the element)
+        String js = "(rootOrHidden, maybeHidden) => {" +
+                "  let base, includeHidden;" +
+                "  if (typeof rootOrHidden === 'boolean') {" +
+                "    base = document;" +
+                "    includeHidden = rootOrHidden;" +
+                "  } else {" +
+                "    base = rootOrHidden || document;" +
+                "    includeHidden = maybeHidden || false;" +
+                "  }" +
                 "  const candidates = Array.from(base.querySelectorAll('button, a, input, textarea, select, [role=\"button\"], label, li, span, div, p, h1, h2, h3, h4, h5, h6, b, strong, i, em'));" +
                 "  return candidates.map(el => {" +
                 "    const rect = el.getBoundingClientRect();" +
                 "    const hasDimension = rect.width > 0 && rect.height > 0;" +
-                "    const isStyleVisible = window.getComputedStyle(el).visibility !== 'hidden';" +
+                "    const isStyleVisible = window.getComputedStyle(el).visibility !== 'hidden' && window.getComputedStyle(el).display !== 'none';" +
                 "    const isVisible = hasDimension && isStyleVisible;" +
                 "    if (!includeHidden && !isVisible) return null;" +
                 "    return {" +
@@ -64,13 +72,16 @@ public class DomScanner {
         Object result = new ArrayList<>();
         try {
             if (scope != null) {
+                // calls js(element, includeHidden)
                 result = scope.evaluate(js, includeHidden);
             } else if (frame != null) {
                 if (!frame.isDetached()) {
-                    result = frame.evaluate("(" + js + ")(" + includeHidden + ")");
+                    // calls js(includeHidden)
+                    result = frame.evaluate(js, includeHidden);
                 }
             } else {
-                result = page.evaluate("(" + js + ")(" + includeHidden + ")");
+                // calls js(includeHidden)
+                result = page.evaluate(js, includeHidden);
             }
         } catch (Exception e) {
             // Log and return empty results for detached frames or cross-origin issues

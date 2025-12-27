@@ -80,18 +80,42 @@ public class FillSemanticMatcher extends BaseSemanticMatcher {
     private List<ScoredElement> findCandidates(Page page, StepIntent intent) {
         List<ScoredElement> elements = new ArrayList<>();
         
-        // Focus on input elements for FILL actions
-        String[] selectors = {"input", "textarea", "select"};
+        // DEBUG: Log which page we're scanning
+        try {
+            String currentUrl = page.url();
+            logger.info("SCANNING PAGE: {}", currentUrl);
+        } catch (Exception e) {
+            logger.warn("Could not get page URL: {}", e.getMessage());
+        }
+        
+        // Focus on input elements AND contenteditable elements for FILL actions
+        // Many modern web apps use contenteditable divs for inline editing (e.g., table cells)
+        String[] selectors = {"input", "textarea", "select", "[contenteditable='true']", "[contenteditable]"};
         
         for (String selector : selectors) {
             try {
+                // CRITICAL FIX: Use .all() to get ALL elements (visible + hidden)
+                // Playwright's page.locator() by default only returns VISIBLE elements
+                // This was causing us to miss form fields that are styled as hidden/off-screen
                 Locator locator = page.locator(selector);
-                int count = Math.min(locator.count(), 30);  // Get more candidates!
+                List<Locator> allElements = locator.all(); // Returns ALL matching elements!
+                int count = Math.min(allElements.size(), 30);
                 
                 for (int i = 0; i < count; i++) {
                     if (elements.size() >= MAX_CANDIDATES) break;
                     try {
-                        Locator elem = locator.nth(i);
+                        Locator elem = allElements.get(i);
+                        
+                        // DEBUG: Log what we're finding
+                        try {
+                            String elemId = (String) elem.evaluate("el => el.id || ''");
+                            String elemName = (String) elem.evaluate("el => el.name || ''");
+                            String elemPlaceholder = (String) elem.evaluate("el => el.placeholder || ''");
+                            String elemTag = (String) elem.evaluate("el => el.tagName.toLowerCase()");
+                            logger.debug("  Found {} element: id='{}', name='{}', placeholder='{}'", 
+                                elemTag, elemId, elemName, elemPlaceholder);
+                        } catch (Exception ignored) {}
+                        
                         elements.add(new ScoredElement(elem, selector));
                     } catch (Exception ignored) {}
                 }

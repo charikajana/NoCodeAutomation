@@ -130,11 +130,12 @@ public class SmartLocator {
                 case "textarea", "text area" -> "textarea";
                 case "slider", "range" -> "slider";
                 case "progressbar", "progress bar" -> "progressbar";
+                case "icon" -> "element";
                 default -> parsedType; // Use original if no match
             };
             
             // Only override if we detected a valid type
-            if (!mappedType.equals(parsedType)) {
+            if (mappedType != null && !mappedType.equals(parsedType)) {
                 logger.debug("Detected element type hint: '{}' -> type='{}'", typeHint, mappedType);
                 detectedType = mappedType;
             }

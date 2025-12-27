@@ -12,3 +12,11 @@ Feature: Intelligence Layer Demo
     
     Then Verify "John Doe" is displayed
     And Check "john@example.com" message is visible
+
+  Scenario: Navigate through Electronics Hover Menu
+    Given Navigate to "https://www.flipkart.com/"
+    When I move mouse to "Electronics"
+    And I point to "MobileAccessory"
+    And I click on "MobileFlash"
+    Then Verify URL contains "mobile-flashes"
+    And Verify "Mobile Flashes" is visible

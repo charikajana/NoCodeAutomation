@@ -7,9 +7,11 @@ Feature: Menu Interaction Testing
   Scenario: Select nested sub-menu item with varied syntax
     When Select Enabled -> Downloads -> PDF from the menu
     And wait for 2 seconds
+    And Navigate to "https://the-internet.herokuapp.com/jqueryui/menu"
     And Open Enabled / Downloads / PDF using the navigation menu
     And wait for 2 seconds
-    And Navigate to Enabled then Downloads then PDF via navbar
+    And Navigate to "https://the-internet.herokuapp.com/jqueryui/menu"
+    And Select Enabled -> Downloads -> PDF from navbar
     Then Verify "Enabled" is displayed
 
   Scenario: Select nested sub-menu item on VinothQA

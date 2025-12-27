@@ -138,7 +138,7 @@ public class DynamicTableXPathBuilder {
         
         // Build flexible XPath that works with the detected structure
         return String.format(
-            "//%s[%s][.//%s[%s][%d][contains(text(), '%s')]]",
+            "//%s[%s][.//%s[%s][%d][contains(., '%s')]]",
             rowTag,
             extractCondition(rowSelector),
             cellTag,

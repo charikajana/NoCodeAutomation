@@ -7,8 +7,8 @@ Feature: RadioButton Automation
     Then Validate Impressive Radio Button is enabled
     Then Validate No Radio Button is disabled
     And Click Yes Radio Button
-    Then Validate "You have selected Yes" message is displayed
+    Then Validate "You have selected Yes" message/text should be visible
     And take the screenshot
     And Click Impressive Radio Button
-    Then Validate "You have selected Impressive" message is displayed
+    Then Validate "You have selected Impressive" message/text should be visible
     And take the screenshot

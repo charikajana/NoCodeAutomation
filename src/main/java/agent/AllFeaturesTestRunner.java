@@ -23,6 +23,19 @@ public class AllFeaturesTestRunner {
         // Target specific features
         java.util.Set<String> targetFeatures = java.util.Set.of(
             
+            "Links.feature",
+            "Menu.feature",
+            "Models.feature",
+            "Navigation.feature",
+            "OtherWebSite.feature",
+            "ProgressBar.feature",
+            "RadioButton.feature",
+            "StateVerification.feature",
+            "SubjectPronounTest.feature", 
+            "Tabs.feature", 
+            "TextBox.feature",
+            "Tooltip.feature",
+            "WebTable.feature",
             "Alerts.feature",
             "AutoComplete.feature",
             "BookStore.feature",

@@ -170,11 +170,15 @@ public class BrowserService {
     private Page getActivePage() {
         if (page != null && page.context() != null) {
             java.util.List<Page> pages = page.context().pages();
+            logger.debug("getActivePage(): Total pages = {}", pages.size());
+            
             for (int i = pages.size() - 1; i >= 0; i--) {
                 Page p = pages.get(i);
                 try {
                     // Simple check to see if page is still alive
-                    p.url(); 
+                    String url = p.url();
+                    logger.debug("  Page[{}]: URL={}", i, url);
+                    logger.info("RETURNING ACTIVE PAGE: {}", url);
                     return p;
                 } catch (Exception e) {
                     // Page likely closed
@@ -182,6 +186,7 @@ public class BrowserService {
                 }
             }
         }
+        logger.warn("No active page found, returning fallback");
         return page; // Fallback to original page
     }
 

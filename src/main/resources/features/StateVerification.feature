@@ -53,19 +53,19 @@ Feature: Comprehensive State Verification
     And wait for page load
     
     # 1. Enabled in row
-    Then Verify Edit is enabled in row where "First Name" is "Cierra"
-    And Verify Delete is active in row where "Last Name" is "Vega"
-    And Verify Edit is clickable in row where "Email" is "cierra@example.com"
-    And Verify Delete should be enabled in row where "Age" is "45"
+    Then Verify Edit Icon is enabled in row where "First Name" is "Cierra"
+    And Verify Delete Icon is active in row where "Last Name" is "Vega"
+    And Verify Edit Icon is clickable in row where "Email" is "cierra@example.com"
+    And Verify Delete Icon should be enabled in row where "Age" is "45"
     
     # 2. Negative phrasing in row
-    And Verify Edit is not disabled in row where "First Name" is "Alden"
+    And Verify Edit Icon is not disabled in row where "First Name" is "Alden"
 
   Scenario: Row-Scoped Selection Verifications (Negative checks)
     When navigate to "https://demoqa.com/webtables"
     And wait for page load
     
     # These rows/buttons are NOT selected
-    Then Verify Edit is not selected in row where "First Name" is "Cierra"
-    And Verify Delete is not checked in row where "First Name" is "Alden"
-    And Verify Edit is unchecked in row where "Email" is "kierra@example.com"
+    Then Verify Edit Icon is not selected in row where "First Name" is "Cierra"
+    And Verify Delete Icon is not checked in row where "First Name" is "Alden"
+    And Verify Edit Icon is unchecked in row where "Email" is "kierra@example.com"
