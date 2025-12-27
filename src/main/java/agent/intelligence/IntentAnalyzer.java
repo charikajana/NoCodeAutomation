@@ -312,6 +312,20 @@ public class IntentAnalyzer {
             }
         }
         
+        // PRIORITY 1.5: Explicit HOVER verbs (prevents "over" from being treated as spatial modifier)
+        // Must come before other patterns to handle "hover over...", "hover on..." correctly
+        if (lowerStep.contains("hover")) {
+            // "hover over", "hover on", "mouse over", etc.
+            if (lowerStep.matches(".*\\bhover\\s+(over|on)\\b.*") || 
+                lowerStep.matches(".*\\bmouse[-\\s]?over\\b.*")) {
+                return ActionType.HOVER;
+            }
+            // Simple "hover [element]"
+            if (lowerStep.startsWith("hover ") || lowerStep.contains(" hover ")) {
+                return ActionType.HOVER;
+            }
+        }
+        
         // PRIORITY 2: Special handling for 'select/choose' with list/grid context
         // "Select 'X' from list" should be SELECT, not a simple CLICK on a "list" element
         if (lowerStep.contains("select ") || lowerStep.contains("choose ")) {

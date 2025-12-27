@@ -35,19 +35,19 @@ public class AllFeaturesTestRunner {
             "Tabs.feature", 
             "TextBox.feature",
             "Tooltip.feature",
-            "WebTable.feature"
-            //  "Alerts.feature",
-            // "AutoComplete.feature",
-            // "BookStore.feature",
-            // "Buttons.feature",
-            // "CheckBox.feature",
-            // "CombinedActions.feature",
-            // "CompleteFormFlow.feature",
-            // "DatePicker.feature",
-            // "ScrollActions.feature", 
-            // "Select.feature", 
-            // "Selectable.feature",
-            // "Slider.feature"
+            "WebTable.feature",
+            "Alerts.feature",
+            "AutoComplete.feature",
+            "BookStore.feature",
+            "Buttons.feature",
+            "CheckBox.feature",
+            "CombinedActions.feature",
+            "CompleteFormFlow.feature",
+            "DatePicker.feature",
+            "ScrollActions.feature", 
+            "Select.feature", 
+            "Selectable.feature",
+            "Slider.feature"
         );
 
         File[] featureFiles = featuresDir.listFiles((dir, name) -> 

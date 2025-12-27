@@ -4,12 +4,6 @@ Feature: Tooltip Verification
   Background:
     Given Navigate to "https://demoqa.com/tool-tips"
 
-  Scenario: Verify button tooltip
-    When Hover over the Hover me to see button
-    And wait for 2 seconds
-    Then Take the Screenshot
-    And Verify tooltip of Hover me to see contains "You hovered over the Button"
-
   Scenario: Verify input field tooltip
     When Mouse over Hover me to see input field
     And wait for 2 seconds
@@ -19,4 +13,6 @@ Feature: Tooltip Verification
   Scenario: Interactive Tooltip verification
     When Click on Hover me to see button
     Then Hover over Hover me to see button
-    And Verify tooltip of Hover me to see contains "You hovered over the Button"
+    And Verify tooltip of Hover me to see contains "You hovered over the Button"  
+
+
