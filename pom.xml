@@ -12,7 +12,7 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <exec.mainClass>testgeni.AgentApplication</exec.mainClass>
+        <exec.mainClass>com.automation.executor.AgentApplication</exec.mainClass>
     </properties>
         <dependencies>
             <!-- Playwright for browser automation -->
@@ -67,7 +67,7 @@
                             <goal>java</goal>
                         </goals>
                         <configuration>
-                            <mainClass>testgeni.AgentApplication</mainClass>
+                            <mainClass>com.automation.executor.AgentApplication</mainClass>
                         </configuration>
                     </execution>
                     <!-- All features execution -->
@@ -77,7 +77,7 @@
                             <goal>java</goal>
                         </goals>
                         <configuration>
-                            <mainClass>testgeni.AllFeaturesTestRunner</mainClass>
+                            <mainClass>com.automation.executor.AllFeaturesTestRunner</mainClass>
                         </configuration>
                     </execution>
                 </executions>
